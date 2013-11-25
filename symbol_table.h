@@ -7,10 +7,11 @@
 extern "C" {
 #endif
 
+typedef struct symbol_entry symbol_entry;
 struct symbol_entry {
 	int 	addr;
 	int 	blk_level;
-	int 	type;
+	int 	type;       /* May actually  be used to determine if local or param */
 	int 	size;
 	int 	offset;
    union { /* Added */
@@ -19,6 +20,7 @@ struct symbol_entry {
    };
 	const char *name; /* changed JWJ */
 };
+    int ADDR;
 
 extern void printSymbolTable();
 extern void popSymbolTable();

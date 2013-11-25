@@ -35,6 +35,10 @@ typedef struct nodeTypeTag {
     };
 } nodeType;
 
+int lineno;     /* Used to keep track of what line the program is on */
+int ARGs;       /* TODO: For now arg list is always assumed to be local */
+char* vName;            /* Added by Kyle Blagg */
+
 #define TYPE_INT   1
 #define TYPE_FLOAT 2
 

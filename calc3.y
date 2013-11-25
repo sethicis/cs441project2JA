@@ -3,31 +3,40 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "calc3.h"
-
+#include "symbol_table.h"
+    
 /* prototypes */
 nodeType *opr(int oper, int nops, ...);
-nodeType *id(int i);
+nodeType *id(int var);
 nodeType *con(int value);
+nodeType *fl(double value);
+/*nodeType *chkInit(int type, char* var);*/
 void freeNode(nodeType *p);
-int ex(nodeType *p);
+double ex(nodeType *p);
 int yylex(void);
 
 void yyerror(char *s);
-int sym[26];                    /* symbol table */
+/* int sym[26];  commented out by Kyle Blagg */    /* symbol table */
 %}
 
 %union {
     int iValue;                 /* integer value */
-    char sIndex;                /* symbol table index */
+    /* Modified by KB changed char sIndex into char* sType */
+    char str;                /* symbol type */
+    int vType;                /* variable type */
+    double fValue;               /* double value */
     nodeType *nPtr;             /* node pointer */
 };
 
+/* Modified by KB, added DOUBLE and changed VARIABLE to VTYPE */
+%token <fValue> DOUBLE
 %token <iValue> INTEGER
-%token <sIndex> VARIABLE
+%token <vType> VTYPE
+%token <str> VARIABLE
 %token WHILE IF PRINT
 %nonassoc IFX
 %nonassoc ELSE
-
+%left DB INT
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
 %left '*' '/'
@@ -42,7 +51,7 @@ program:
         ;
 
 function:
-          function stmt         { ex($2); freeNode($2); }
+function stmt         { ex($2); freeNode($2); pushSymbolTable(); }
         | /* NULL */
         ;
 
@@ -64,6 +73,7 @@ stmt_list:
 
 expr:
           INTEGER               { $$ = con($1); }
+        | DOUBLE                { $$ = fl($1); }
         | VARIABLE              { $$ = id($1); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
@@ -81,36 +91,100 @@ expr:
 
 %%
 
-#define SIZEOF_NODETYPE ((char *)&p->con - (char *)p)
+#define SIZEOF_NODECONTYPE ((char *)&p->con - (char *)p)
+#define SIZEOF_NODEFLTYPE ((char *)&p->fl - (char *)p)
+/*
+nodeType *chkInit(int type, char* var){
+    if (getSymbolEntry(var) != 0){
+        if (type == typeId) {
+            type = getSymbolEntry(var)->type;
+            
+        }else{
+            yyerror("Variable defined more than once");
+        }
+    }else{
+        if (type == typeId) {
+            yyerror("Variable not defined");
+        }
+        else if (type == typeCon){
+            return id(var);
+        }
+        else if (type == typeFloat){
+            return id(var);
+        }else
+            yyerror("Unidentified datatype");
+    }
+    return id(var);
+}*/
 
 nodeType *con(int value) {
+
     nodeType *p;
     size_t nodeSize;
 
+    /* copy information */
     /* allocate node */
-    nodeSize = SIZEOF_NODETYPE + sizeof(conNodeType);
+    nodeSize = SIZEOF_NODECONTYPE + sizeof(nodeType);
     if ((p = malloc(nodeSize)) == NULL)
         yyerror("out of memory");
-
-    /* copy information */
     p->type = typeCon;
-    p->con.value = value;
+    p->con.value = (int)value;
+    return p;
+}
+
+
+nodeType *fl(double value) {
+    
+    nodeType *p;
+    size_t nodeSize;
+    
+/* copy information */
+    /* allocate node */
+    nodeSize = SIZEOF_NODEFLTYPE + sizeof(nodeType);
+    if ((p = malloc(nodeSize)) == NULL)
+        yyerror("out of memory");
+    p->type = typeFloat;
+    p->fl.value = value;
 
     return p;
 }
 
-nodeType *id(int i) {
+
+nodeType *id(int var) {
+    printf("Adding var: %d\n",var);
+    
     nodeType *p;
+    struct symbol_entry *entry;
     size_t nodeSize;
 
     /* allocate node */
-    nodeSize = SIZEOF_NODETYPE + sizeof(idNodeType);
+    nodeSize = SIZEOF_NODECONTYPE + sizeof(nodeType);
     if ((p = malloc(nodeSize)) == NULL)
         yyerror("out of memory");
-
+    if (getSymbolEntry(vName) == 0) {
+        nodeSize = sizeof(struct symbol_entry);
+        if ((entry = malloc(nodeSize)) == NULL)
+            yyerror("out of memory");
+        /* Place elements into symbol table by: AK-KB */
+        entry->type = typeId;
+        entry->name = vName;
+        entry->addr = ADDR++; /* Checks will needed to be added for block levels */
+        entry->blk_level = getCurrentLevel(); /* Get the curr blk lvl AK-KB */
+        entry->size = 1; /* For now size is staticly set to 1 AK-KB */
+        if (ARGs < 0 || ARGs >= 3) {
+            entry->offset = ARGs++;
+        }else{
+            ARGs = 3;
+            entry->offset = ARGs++;
+        }
+        printf("Adding a new element to the symbol_table\n");
+        addSymbol(entry,lineno);
+    }
+    
     /* copy information */
     p->type = typeId;
-    p->id.i = i;
+    p->id.s = vName;
+    
 
     return p;
 }
@@ -122,8 +196,7 @@ nodeType *opr(int oper, int nops, ...) {
     int i;
 
     /* allocate node */
-    nodeSize = SIZEOF_NODETYPE + sizeof(oprNodeType) +
-        (nops - 1) * sizeof(nodeType*);
+    nodeSize = sizeof(oprNodeType) + (nops - 1) * sizeof(nodeType*);
     if ((p = malloc(nodeSize)) == NULL)
         yyerror("out of memory");
 
@@ -154,6 +227,10 @@ void yyerror(char *s) {
 }
 
 int main(void) {
+    pushSymbolTable();
+    ARGs = 3;
+    ADDR = 0;
+    lineno = 0;
     yyparse();
     return 0;
 }

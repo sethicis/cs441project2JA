@@ -114,6 +114,7 @@ pushSymbolTable ()
 void
 addSymbol (symbol_entry * new_entry, int lineno)
 {
+    
   //A pointer to the current symbol table
   map < string, symbol_entry > *curr_symbol_table;
 
@@ -155,6 +156,7 @@ addSymbol (symbol_entry * new_entry, int lineno)
 
   //Add the entry to the current symbol table
   (*curr_symbol_table)[new_entry->name] = *new_entry;
+    cout << "Starting addSymbol" << endl;
   return;
 }
 
