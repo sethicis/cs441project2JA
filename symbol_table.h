@@ -15,9 +15,9 @@ struct symbol_entry {
 	int 	size;
 	int 	offset;
    union { /* Added */
-     int iVal;
-     double fVal;
-   };
+     int i;
+     double f;
+   }val;
 	const char *name; /* changed JWJ */
 };
     int ADDR;

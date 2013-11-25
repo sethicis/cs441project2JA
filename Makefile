@@ -1,5 +1,5 @@
 ## This makefile needs editing to work
-CC         = gcc -Wall
+CC         = gcc -Wall -g
 OPTIONS    = -lfl
 OBJECTS    = y.tab.o lex.yy.o symbol_table.o calc3a.o
 HEADERS    = calc3.h symbol_table.h y.tab.h
@@ -30,7 +30,7 @@ BIN_NAME   = cs441-sample
 
 #calc3
 calc3a: $(OBJECTS) $(HEADERS)
-	g++ -Wall $(OBJECTS) -o calc3a.exe
+	g++ -Wall -g $(OBJECTS) -o calc3a.exe
 calc3a.o: $(HEADERS)
 	$(CC) -c calc3a.c
 #calc3b: $(OBJECTS)

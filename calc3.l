@@ -14,8 +14,8 @@ void setStr(char*);
 /* Modified by Kyle Blagg, removed '\n' and added a special rule just for it */
 
 %%
-"double"        {return DB;}
-"int"           {return INT;}
+"double"        return DB;
+"int"           return INT;
 ">="            return GE;
 "<="            return LE;
 "=="            return EQ;
@@ -24,31 +24,24 @@ void setStr(char*);
 "if"            return IF;
 "else"          return ELSE;
 "print"         return PRINT;
-[-()<>=+*/;{}.] {
+[-()<>=+*/;{}] {
     return *yytext;
 }
 
 [a-zA-Z]+   {
-    printf("The value of yytext is: %s and the size is: %d\n",yytext,strlen(yytext)+1);
-                yylval.str = *yytext - 'a';
-                setStr(yytext);
+                yylval.sIndex = strdup(yytext);
+                //setStr(yytext);
                 return VARIABLE;
             }
-
-0           {
-                yylval.iValue = atoi(yytext);
-                return INTEGER;
-            }
-
-[1-9][0-9]* {
-                yylval.iValue = atoi(yytext);
-                return INTEGER;
-            }
-
-[0-9]*'.'[0-9]+ {
+[0-9]*\.[0-9]+ {   printf("Matched DOUBLE: %f\n",atof(yytext));
                     yylval.fValue = atof(yytext);
                     return DOUBLE;
                 }
+
+0|[1-9][0-9]* {   printf("Matched INT\n");
+                yylval.iValue = atoi(yytext);
+                return INTEGER;
+            }
 '\n'            ++lineno;
 [ \t]+        ;       /* ignore whitespace */
 
