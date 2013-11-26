@@ -8,7 +8,7 @@ int ex(nodeType *p) {
     switch(p->type) {
     case typeCon:       return p->con.value;
     case typeId:        return getSymbolEntry(p->id.s)->val.i;
-    case typeFloat:     return getSymbolEntry(p->id.s)->val.f;
+        case typeFloat:     printf("returning float\n");return p->fl.value;
     case typeOpr:
         switch(p->opr.oper) {
         case WHILE:     while(ex(p->opr.op[0])) ex(p->opr.op[1]); return 0;
