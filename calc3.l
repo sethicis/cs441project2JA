@@ -24,6 +24,8 @@ void setStr(char*);
 "if"            return IF;
 "else"          return ELSE;
 "print"         return PRINT;
+"do" 		return DOWHILE;
+"repeat"	return REPUNTIL;
 [-()<>=+*/;{}] {
     return *yytext;
 }

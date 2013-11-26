@@ -37,7 +37,7 @@ calc3a.o: $(HEADERS)
 #	$(CC) $(OBJECTS) calc3b.c -o calc3b.exe
 #calc3g: $(OBJECTS)
 #	$(CC) $(OBJECTS) calc3g.c -o calc3g.exe
-y.tab.o: $(HEADERS) y.tab.c
+y.tab.o: calc3.h symbol_table.h  y.tab.c
 	$(CC) -c y.tab.c
 lex.yy.o: $(HEADERS) lex.yy.c
 	$(CC) -c lex.yy.c
@@ -48,4 +48,4 @@ lex.yy.c: calc3.l
 symbol_table.o: $(HEADERS) symbol_table.cc
 	g++ -Wall -c symbol_table.cc
 clean:
-	rm -f *.o *.exe lex.yy.c y.tab.c
+	rm -f *.o *.exe lex.yy.c y.tab.c y.tab.h
