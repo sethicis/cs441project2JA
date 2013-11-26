@@ -9,6 +9,7 @@
 nodeType *opr(int oper, int nops, ...);
 nodeType *id(char* i);
 nodeType *con(int value);
+nodeType *fl(double value);
 void freeNode(nodeType *p);
 int ex(nodeType *p);
 int yylex(void);
@@ -27,7 +28,7 @@ void yyerror(char *s);
 %token <iValue> INTEGER
 %token <fValue> DOUBLE
 %token <sIndex> VARIABLE
-%token WHILE IF PRINT
+%token WHILE IF PRINT DOWHILE REPUNTIL
 %nonassoc IFX
 %nonassoc ELSE
 %right DB INT
@@ -54,9 +55,13 @@ stmt:
         | expr ';'                       { $$ = $1; }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
         | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1), $3); }
+	| DB VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
+	| INT VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
+	| DO stmt WHILE '(' expr ')' ';' { $$ = opr(DOWHILE, 2, $2, $5); }
+	| REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPUNTIL, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
         ;
 
@@ -69,6 +74,8 @@ expr:
           INTEGER               { $$ = con($1); }
         | DOUBLE                { $$ = fl($1); }
         | VARIABLE              { $$ = id($1); }
+	| INT VARIABLE		{ $$ = id($2); }
+	| DB VARIABLE		{ $$ = id($2); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
