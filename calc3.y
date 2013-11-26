@@ -59,7 +59,7 @@ stmt:
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
         | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1), $3); }
         | DB VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
-        | INT VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
+| INT VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); printf("Inting\n");}
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
@@ -93,9 +93,9 @@ expr:
         | '(' expr ')'          { $$ = $2; }
         ;
 mLine:
-         VARIABLE '=' expr ',' mLine    { $$ = opr('=', 2, id($1), $3); }
+VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, id($1), $3))); }
         |VARIABLE '=' expr              { $$ = opr('=',2, id($1), $3); }
-        |VARIABLE ',' mLine             { $$ = id($1); }
+        |VARIABLE ',' mLine             { $$ = opr(',', 2, $3,id($1)); }
         |VARIABLE                       { $$ = id($1); }
         ;
 
@@ -135,7 +135,7 @@ nodeType *fl(double value) {
 }
 
 nodeType *id(char* name) {
-    printf("Entrying ID assigning: %s\n",name);
+    //printf("Entrying ID assigning: %s\n",name);
     nodeType *p;
     size_t nodeSize;
     symbol_entry *e;
@@ -157,14 +157,14 @@ nodeType *id(char* name) {
                 ARGs = 3;
                 e->offset = ARGs++;
             }
-            printf("Adding a new element to the symbol_table\n");
+            //printf("Adding a new element to the symbol_table\n");
             addSymbol(e,lineno);
         }
 
     /* copy information */
     p->type = typeId;
     p->id.s = name;
-    printf("Finished ID gen\n");
+    //printf("Finished ID gen\n");
     return p;
 }
 

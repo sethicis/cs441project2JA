@@ -27,7 +27,7 @@ void setStr(char*);
 "do" 		return DO;
 "repeat"	return REPEAT;
 "until" 	return UNTIL;
-[-()<>=+*/;{}] {
+[-()<>=+*/;{},] {
     return *yytext;
 }
 

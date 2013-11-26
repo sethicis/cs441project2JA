@@ -7,7 +7,7 @@ typedef struct {
 
 /* floats - added */
 typedef struct {
-    float value;                /* value of float */
+    double value;                /* value of float */
 } floatNodeType;
 
 /* identifiers */

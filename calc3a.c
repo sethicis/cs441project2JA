@@ -19,9 +19,16 @@ int ex(nodeType *p) {
                         else if (p->opr.nops > 2)
                             ex(p->opr.op[2]);
                         return 0;
+            case ',':       printf("Multi Line\n");/* Case multi line */
+                if (p->opr.nops > 1) {
+                    ex(p->opr.op[1]); return ex(p->opr.op[0]);
+                }else{
+                    return ex(p->opr.op[0]);
+                }
+                /*return ex(p->opr.op[0]);*/
         case PRINT:     printf("%d\n", ex(p->opr.op[0])); return 0;
         case ';':       ex(p->opr.op[0]); return ex(p->opr.op[1]);
-        case '=':       return getSymbolEntry(p->opr.op[0]->id.s)->val.i = ex(p->opr.op[1]);
+            case '=':       printf("Assigning\n");return getSymbolEntry(p->opr.op[0]->id.s)->val.i = ex(p->opr.op[1]);
         case UMINUS:    return -ex(p->opr.op[0]);
         case '+':       return ex(p->opr.op[0]) + ex(p->opr.op[1]);
         case '-':       return ex(p->opr.op[0]) - ex(p->opr.op[1]);
