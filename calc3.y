@@ -37,7 +37,7 @@ void yyerror(char *s);
 %left '*' '/'
 %nonassoc UMINUS
 
-%type <nPtr> stmt expr stmt_list
+%type <nPtr> stmt expr stmt_list mLine
 
 %%
 
@@ -53,15 +53,17 @@ function:
 stmt:
           ';'                            { $$ = opr(';', 2, NULL, NULL); }
         | expr ';'                       { $$ = $1; }
+        | DB mLine ';'                   { $$ = opr(',', 1, $2); }
+        | INT mLine ';'                  { $$ = opr(',', 1, $2); }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
         | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1), $3); }
-	| DB VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
-	| INT VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
+        | DB VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
+        | INT VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
-	| DO stmt WHILE '(' expr ')' ';' { $$ = opr(DOWHILE, 2, $2, $5); }
-	| REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPUNTIL, 2, $2, $5); }
+        | DO stmt WHILE '(' expr ')' ';' { $$ = opr(DOWHILE, 2, $2, $5); }
+        | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPUNTIL, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
         ;
 
@@ -74,8 +76,8 @@ expr:
           INTEGER               { $$ = con($1); }
         | DOUBLE                { $$ = fl($1); }
         | VARIABLE              { $$ = id($1); }
-	| INT VARIABLE		{ $$ = id($2); }
-	| DB VARIABLE		{ $$ = id($2); }
+        | INT VARIABLE		{ $$ = id($2); }
+        | DB VARIABLE		{ $$ = id($2); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
@@ -88,6 +90,12 @@ expr:
         | expr NE expr          { $$ = opr(NE, 2, $1, $3); }
         | expr EQ expr          { $$ = opr(EQ, 2, $1, $3); }
         | '(' expr ')'          { $$ = $2; }
+        ;
+mLine:
+         VARIABLE '=' expr ',' mLine    { $$ = opr('=', 2, id($1), $3); }
+        |VARIABLE '=' expr              { $$ = opr('=',2, id($1), $3); }
+        |VARIABLE ',' mLine             { $$ = id($1); }
+        |VARIABLE                       { $$ = id($1); }
         ;
 
 %%
