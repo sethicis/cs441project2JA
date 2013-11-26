@@ -156,7 +156,6 @@ addSymbol (symbol_entry * new_entry, int lineno)
 
   //Add the entry to the current symbol table
   (*curr_symbol_table)[new_entry->name] = *new_entry;
-    cout << "Starting addSymbol" << endl;
   return;
 }
 

@@ -114,13 +114,13 @@ nodeType *chkInit(int declar, char* var){
         if ((getSymbolEntry(var)) == 0){
             return id(var);
         }else{
-            printf("ERROR @ LINE# %d. Variable: %s already defined\n",lineno,var); exit(0);
+            printf("ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
         }
     }else{
         if ((getSymbolEntry(var)) != 0){
             return id(var);
         }else{
-            printf("ERROR @ LINE# %d. Variable: %s not declared\n",lineno,var); exit(0);
+            printf("ERROR @ LINE# %d:: Variable: '%s' not declared\n",lineno,var); exit(0);
         }
     }
 }
@@ -157,7 +157,6 @@ nodeType *fl(double value) {
 }
 
 nodeType *id(char* name) {
-    //printf("Entrying ID assigning: %s\n",name);
     nodeType *p;
     size_t nodeSize;
     symbol_entry *e;
@@ -179,14 +178,12 @@ nodeType *id(char* name) {
                 ARGs = 3;
                 e->offset = ARGs++;
             }
-            //printf("Adding a new element to the symbol_table\n");
             addSymbol(e,lineno);
         }
 
     /* copy information */
     p->type = typeId;
     p->id.s = name;
-    //printf("Finished ID gen\n");
     return p;
 }
 
