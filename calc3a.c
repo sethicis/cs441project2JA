@@ -11,6 +11,8 @@ int ex(nodeType *p) {
     case typeFloat:     return p->fl.value;
     case typeOpr:
         switch(p->opr.oper) {
+	case DO:	do{ex(p->opr.op[0]);}while(ex(p->opr.op[1])); return 0; 
+	case REPEAT:  do{ex(p->opr.op[0]);}while(!(ex(p->opr.op[1]))); return 0;
 	case WHILE:     while(ex(p->opr.op[0])) ex(p->opr.op[1]); return 0;
        	case IF:        if (ex(p->opr.op[0]))
                             ex(p->opr.op[1]);
