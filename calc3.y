@@ -28,7 +28,8 @@ void yyerror(char *s);
 %token <iValue> INTEGER
 %token <fValue> DOUBLE
 %token <sIndex> VARIABLE
-%token WHILE IF PRINT DOWHILE REPUNTIL
+%token WHILE IF PRINT 
+%token DO REPEAT UNTIL
 %nonassoc IFX
 %nonassoc ELSE
 %right DB INT
@@ -60,8 +61,8 @@ stmt:
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
-	| DO stmt WHILE '(' expr ')' ';' { $$ = opr(DOWHILE, 2, $2, $5); }
-	| REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPUNTIL, 2, $2, $5); }
+	| DO stmt WHILE '(' expr ')' ';' { $$ = opr(DO, 2, $2, $5); }
+	| REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
         ;
 
