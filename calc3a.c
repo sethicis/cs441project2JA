@@ -12,23 +12,20 @@ int ex(nodeType *p) {
     case typeOpr:
         switch(p->opr.oper) {
 	case DO:	do{ex(p->opr.op[0]);}while(ex(p->opr.op[1])); return 0; 
-	case REPEAT:  do{ex(p->opr.op[0]);}while(!(ex(p->opr.op[1]))); return 0;
+	case REPEAT:    do{ex(p->opr.op[0]);}while(!(ex(p->opr.op[1]))); return 0;
 	case WHILE:     while(ex(p->opr.op[0])) ex(p->opr.op[1]); return 0;
        	case IF:        if (ex(p->opr.op[0]))
                             ex(p->opr.op[1]);
                         else if (p->opr.nops > 2)
                             ex(p->opr.op[2]);
                         return 0;
-            case ',':       printf("Multi Line\n");/* Case multi line */
-                if (p->opr.nops > 1) {
-                    ex(p->opr.op[1]); return ex(p->opr.op[0]);
-                }else{
-                    return ex(p->opr.op[0]);
-                }
-                /*return ex(p->opr.op[0]);*/
+        case ',':       if (p->opr.nops > 1) {
+                       		ex(p->opr.op[1]); return ex(p->opr.op[0]);}
+			else{
+                    		return ex(p->opr.op[0]);}
         case PRINT:     printf("%d\n", ex(p->opr.op[0])); return 0;
         case ';':       ex(p->opr.op[0]); return ex(p->opr.op[1]);
-            case '=':       printf("Assigning\n");return getSymbolEntry(p->opr.op[0]->id.s)->val.i = ex(p->opr.op[1]);
+        case '=':       return getSymbolEntry(p->opr.op[0]->id.s)->val.i = ex(p->opr.op[1]);
         case UMINUS:    return -ex(p->opr.op[0]);
         case '+':       return ex(p->opr.op[0]) + ex(p->opr.op[1]);
         case '-':       return ex(p->opr.op[0]) - ex(p->opr.op[1]);
