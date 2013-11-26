@@ -5,7 +5,6 @@
 #include "y.tab.h"
 #include <string.h> /* Added by Kyle Blagg */
 void yyerror(char *);
-extern int lineno;      /* Added by KB */
 void setStr(char*);
 %}
 /* Modified line: Added '+' by Kyle Blagg */
@@ -36,28 +35,20 @@ void setStr(char*);
                 //setStr(yytext);
                 return VARIABLE;
             }
-[0-9]*\.[0-9]+ {   printf("Matched DOUBLE: %f\n",atof(yytext));
+[0-9]*\.[0-9]+ {
                     yylval.fValue = atof(yytext);
                     return DOUBLE;
                 }
 
-0|[1-9][0-9]* {   printf("Matched INT\n");
+0|[1-9][0-9]* { 
                 yylval.iValue = atoi(yytext);
                 return INTEGER;
             }
-'\n'            ++lineno;
+\n          {lineno = lineno + 1;}
 [ \t]+        ;       /* ignore whitespace */
 
 .               yyerror("Unknown character");
 %%
 int yywrap(void) {
     return 1;
-}
-
-void setStr(char* yytext){
-    printf("Debug: str is: %s len is: %d\n",yytext,strlen(yytext));
-    vName = (char*)malloc(strlen(yytext)+1);
-    strcpy(vName,yytext);
-    printf("Finished copy\n");
-    //vName[strlen(yytext)+1] = '\0';
 }

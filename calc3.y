@@ -10,6 +10,7 @@ nodeType *opr(int oper, int nops, ...);
 nodeType *id(char* i);
 nodeType *con(int value);
 nodeType *fl(double value);
+nodeType *chkInit(int declar,char* name);
 void freeNode(nodeType *p);
 int ex(nodeType *p);
 int yylex(void);
@@ -57,14 +58,14 @@ stmt:
         | DB mLine ';'                   { $$ = opr(',', 1, $2); }
         | INT mLine ';'                  { $$ = opr(',', 1, $2); }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
-        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1), $3); }
-        | DB VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); }
-| INT VARIABLE '=' expr ';'	 { $$ = opr('=', 2, id($2), $4); printf("Inting\n");}
+        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(0,$1), $3); }
+        | DB VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(1,$2), $4); }
+        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(1,$2), $4);}
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
-	| DO stmt WHILE '(' expr ')' ';' { $$ = opr(DO, 2, $2, $5); }
-	| REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
+        | DO stmt WHILE '(' expr ')' ';' { $$ = opr(DO, 2, $2, $5); }
+        | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
         ;
 
@@ -77,8 +78,8 @@ expr:
           INTEGER               { $$ = con($1); }
         | DOUBLE                { $$ = fl($1); }
         | VARIABLE              { $$ = id($1); }
-        | INT VARIABLE		{ $$ = id($2); }
-        | DB VARIABLE		{ $$ = id($2); }
+        | INT VARIABLE          { $$ = chkInit(1,$2); }
+        | DB VARIABLE           { $$ = chkInit(1,$2); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
@@ -93,7 +94,7 @@ expr:
         | '(' expr ')'          { $$ = $2; }
         ;
 mLine:
-VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, id($1), $3))); }
+         VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(1,$1), $3))); }
         |VARIABLE '=' expr              { $$ = opr('=',2, id($1), $3); }
         |VARIABLE ',' mLine             { $$ = opr(',', 2, $3,id($1)); }
         |VARIABLE                       { $$ = id($1); }
@@ -102,6 +103,27 @@ VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, id($1), $3)));
 %%
 
 #define SIZEOF_NODETYPE ((char *)&p->con - (char *)p)
+
+/* Helper function used to check if a variable has already been defined
+ @param declar: This is a flag used to tell the function if you expect
+ the variable to have been declared or if you are declaring the variable.
+ @param var: This contains the variable name.
+ */
+nodeType *chkInit(int declar, char* var){
+    if (declar){
+        if ((getSymbolEntry(var)) == 0){
+            return id(var);
+        }else{
+            printf("ERROR @ LINE# %d. Variable: %s already defined\n",lineno,var); exit(0);
+        }
+    }else{
+        if ((getSymbolEntry(var)) != 0){
+            return id(var);
+        }else{
+            printf("ERROR @ LINE# %d. Variable: %s not declared\n",lineno,var); exit(0);
+        }
+    }
+}
 
 nodeType *con(int value) {
     nodeType *p;
@@ -207,7 +229,7 @@ void yyerror(char *s) {
 }
 
 int main(void) {
-    lineno = 0;
+    lineno++;
     ARGs = 3;
     pushSymbolTable();
     yyparse();
