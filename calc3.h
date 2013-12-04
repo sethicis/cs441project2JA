@@ -38,6 +38,7 @@ typedef struct nodeTypeTag {
 char* vName;
 int ARGs;
 int lineno;
+int prog_addr;
 
 #define TYPE_INT   1
 #define TYPE_FLOAT 2
