@@ -228,9 +228,12 @@ void yyerror(char *s) {
 int main(void) {
     lineno++;
     ARGs = 3;
-    intprog_addr = 1;
+    prog_addr = 1;
+    printf("%04d Prog varlen:%d addr:%d\n",prog_addr,0,4); /* Insert program start header */
+    prog_addr = prog_addr + 3;
     pushSymbolTable();
     yyparse();
     popSymbolTable();
+    printf("%04d EndProg\n",prog_addr++); /* End program */
     return 0;
 }

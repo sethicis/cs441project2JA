@@ -3,6 +3,8 @@
 #include "y.tab.h"
 #include "symbol_table.h"
 
+void genOp(int);
+
 int ex(nodeType *p) {
     if (!p) return 0;
     switch(p->type) {
@@ -22,9 +24,10 @@ int ex(nodeType *p) {
         case ',':       if (p->opr.nops > 1) {
                        		ex(p->opr.op[1]); return ex(p->opr.op[0]);}
 			else{
-                    		return ex(p->opr.op[0]);}
+                    		return ex(p->opr.op[0]);
+            }
         /*case PRINT:     printf("%d\n", ex(p->opr.op[0])); return 0;*/
-        case PRINT:     genOp(ex(p->opr.op[0]))); return 0;
+        case PRINT:     genOp(ex(p->opr.op[0])); return 0;
         case ';':       ex(p->opr.op[0]); return ex(p->opr.op[1]);
         case '=':       return getSymbolEntry(p->opr.op[0]->id.s)->val.i = ex(p->opr.op[1]);
         case UMINUS:    return -ex(p->opr.op[0]);
@@ -44,11 +47,10 @@ int ex(nodeType *p) {
 }
 
 void genOp(int constant){
-    printf("%04d Prog varlen:%d addr:%d\n",intprog_addr,0,4);
-    intprog_addr = intprog_addr + 3;
-    printf("04%d I_Constant value:%d\n",intprog_addr,constant);
-    intprog_addr = intprog_addr + 2; /* Increment intprog_addr */
-    printf("%04d I_Write words:%d\n",intprog_addr,1);
-    intprog_addr = intprog_addr + 2;
-    printf("%04d EndProg\n",intprog_addr++);
+    
+    printf("%04d I_Constant value:%d\n",prog_addr,constant);
+    prog_addr = prog_addr + 2; /* Increment intprog_addr */
+    printf("%04d I_Write words:%d\n",prog_addr,1);
+    prog_addr = prog_addr + 2;
+    
 }
