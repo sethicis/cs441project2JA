@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
 #include "calc3.h"
 #include "symbol_table.h"
@@ -225,15 +226,22 @@ void yyerror(char *s) {
     fprintf(stdout, "%s\n", s);
 }
 
-int main(void) {
-    lineno++;
-    ARGs = 3;
-    prog_addr = 1;
-    printf("%04d Prog varlen:%d addr:%d\n",prog_addr,0,4); /* Insert program start header */
-    prog_addr = prog_addr + 3;
-    pushSymbolTable();
-    yyparse();
-    popSymbolTable();
-    printf("%04d EndProg\n",prog_addr++); /* End program */
+int main(int argc,char** argv) {
+    if (argc > 1)
+    {
+        lineno++;
+        ARGs = 3;
+        prog_addr = 1;
+        printf("%04d Prog varlen:%d addr:%d\n",prog_addr,0,4); /* Insert program start header */
+        prog_addr = prog_addr + 3;
+        pushSymbolTable();
+        yyparse();
+        popSymbolTable();
+        fileName = strdup((char *) argv[1]);
+    }
+    else
+    {
+        printf("%s \n", "File Error, No Parameters Passed!");
+    }
     return 0;
 }
