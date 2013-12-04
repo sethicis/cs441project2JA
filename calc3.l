@@ -46,7 +46,7 @@ void setStr(char*);
             }
 \n          {lineno = lineno + 1;}
 [ \t]+        ;       /* ignore whitespace */
-
+<<EOF>>      {printf("%04d EndProg\n",prog_addr++); exit(0);}
 .               yyerror("Unknown character");
 %%
 int yywrap(void) {

@@ -227,8 +227,14 @@ void yyerror(char *s) {
 }
 
 int main(int argc,char** argv) {
-    if (argc > 1)
+    /*if (argc > 1)
     {
+        fileName = strdup((char *) argv[1]);
+    }
+    else
+    {
+        printf("%s \n", "File Error, No Parameters Passed!");
+    }*/
         lineno++;
         ARGs = 3;
         prog_addr = 1;
@@ -237,11 +243,5 @@ int main(int argc,char** argv) {
         pushSymbolTable();
         yyparse();
         popSymbolTable();
-        fileName = strdup((char *) argv[1]);
-    }
-    else
-    {
-        printf("%s \n", "File Error, No Parameters Passed!");
-    }
     return 0;
 }
