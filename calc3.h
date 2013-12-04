@@ -36,6 +36,7 @@ typedef struct nodeTypeTag {
 } nodeType;
 
 char* vName;
+char* fileName; 
 int ARGs;
 int lineno;
 int prog_addr;
