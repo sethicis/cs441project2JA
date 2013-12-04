@@ -31,6 +31,8 @@ Design improvements were made to associate the P-code
 Generation for the program, so testing is handled easier.
 
 I/O Redirection must be used for Program Execution for output file.
+STDOUT is used for P-Code Generation Output, while STDERR is
+used for Error Message Handling Outputs.
 
 For example:
 "./calc3a.exe > test.aa"

@@ -115,13 +115,13 @@ nodeType *chkInit(int declar, char* var){
         if ((getSymbolEntry(var)) == 0){
             return id(var);
         }else{
-            printf("ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
+            fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
         }
     }else{
         if ((getSymbolEntry(var)) != 0){
             return id(var);
         }else{
-            printf("ERROR @ LINE# %d:: Variable: '%s' not declared\n",lineno,var); exit(0);
+            fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' not declared\n",lineno,var); exit(0);
         }
     }
 }
@@ -223,7 +223,7 @@ void freeNode(nodeType *p) {
 }
 
 void yyerror(char *s) {
-    fprintf(stdout, "%s\n", s);
+    fprintf(stderr, "%s\n", s);
 }
 
 int main(int argc,char** argv) {
