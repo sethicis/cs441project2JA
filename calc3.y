@@ -228,6 +228,7 @@ void yyerror(char *s) {
 int main(void) {
     lineno++;
     ARGs = 3;
+    intprog_addr = 1;
     pushSymbolTable();
     yyparse();
     popSymbolTable();
