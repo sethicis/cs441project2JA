@@ -1,3 +1,6 @@
+#ifndef CALC_3_H
+#define CALC_3_H
+
 typedef enum { typeCon, typeFloat, typeId, typeOpr } nodeEnum; /* added */
 
 /* constants */
@@ -7,7 +10,7 @@ typedef struct {
 
 /* floats - added */
 typedef struct {
-    double value;                /* value of float */
+    float value;                /* value of float */
 } floatNodeType;
 
 /* identifiers */
@@ -35,13 +38,21 @@ typedef struct nodeTypeTag {
     };
 } nodeType;
 
-char* vName;
-char* fileName; 
-int ARGs;
-int lineno;
-int prog_addr;
+#ifdef __cplusplus
+extern "C" {
+#endif
+    int ex(nodeType*);
+    int getCurrentOffset(void);
+    void setCurrentOffset(int);
+    int incrementCurrentOffset(void);
+    int getLastOffset(void);
+#ifdef __cplusplus
+}
+#endif
 
 #define TYPE_INT   1
 #define TYPE_FLOAT 2
 
 /* removed extern int sym[26]; JWJ */
+
+#endif /* CALC_3_H */

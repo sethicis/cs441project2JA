@@ -5,19 +5,20 @@
 #include <stdarg.h>
 #include "calc3.h"
 #include "symbol_table.h"
+#include "PstackInterface.h"
+#include "globals.h"
+#include "apm.h"
 
 /* prototypes */
 nodeType *opr(int oper, int nops, ...);
-nodeType *id(char* i);
+nodeType *id(char* i,int type);
 nodeType *con(int value);
 nodeType *fl(double value);
-nodeType *chkInit(int declar,char* name);
+nodeType *chkInit(int declar,char* name,int type);
 void freeNode(nodeType *p);
-int ex(nodeType *p);
 int yylex(void);
-
 void yyerror(char *s);
-//int sym[26];                    /* symbol table */
+
 %}
 
 %union {
@@ -30,7 +31,7 @@ void yyerror(char *s);
 %token <iValue> INTEGER
 %token <fValue> DOUBLE
 %token <sIndex> VARIABLE
-%token WHILE IF PRINT 
+%token WHILE IF PRINT QUIT
 %token DO REPEAT UNTIL
 %nonassoc IFX
 %nonassoc ELSE
@@ -45,7 +46,8 @@ void yyerror(char *s);
 %%
 
 program:
-        function                { exit(0); }
+        function                { return 0; }
+        QUIT                    { yyerror("Terminating"); return 0; }
         ;
 
 function:
@@ -59,9 +61,9 @@ stmt:
         | DB mLine ';'                   { $$ = opr(',', 1, $2); }
         | INT mLine ';'                  { $$ = opr(',', 1, $2); }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
-        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(0,$1), $3); }
-        | DB VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(1,$2), $4); }
-        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(1,$2), $4);}
+        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(1,$1,0), $3); }
+        | DB VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(0,$2,typeFloat), $4); }
+        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(0,$2,typeCon), $4);}
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
@@ -78,9 +80,9 @@ stmt_list:
 expr:
           INTEGER               { $$ = con($1); }
         | DOUBLE                { $$ = fl($1); }
-        | VARIABLE              { $$ = id($1); }
-        | INT VARIABLE          { $$ = chkInit(1,$2); }
-        | DB VARIABLE           { $$ = chkInit(1,$2); }
+        | VARIABLE              { $$ = chkInit(1,$1,0); }
+        | INT VARIABLE          { $$ = chkInit(0,$2,typeCon); }
+        | DB VARIABLE           { $$ = chkInit(0,$2,typeFloat); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
@@ -95,10 +97,10 @@ expr:
         | '(' expr ')'          { $$ = $2; }
         ;
 mLine:
-         VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(1,$1), $3))); }
-        |VARIABLE '=' expr              { $$ = opr('=',2, id($1), $3); }
-        |VARIABLE ',' mLine             { $$ = opr(',', 2, $3,id($1)); }
-        |VARIABLE                       { $$ = id($1); }
+         VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(0,$1,0), $3))); }
+        |VARIABLE '=' expr              { $$ = opr('=',2, chkInit(0,$1,0), $3); }
+        |VARIABLE ',' mLine             { $$ = opr(',', 2, $3,chkInit(0,$1,0)); }
+        |VARIABLE                       { $$ = chkInit(0,$1,0); }
         ;
 
 %%
@@ -110,16 +112,16 @@ mLine:
  the variable to have been declared or if you are declaring the variable.
  @param var: This contains the variable name.
  */
-nodeType *chkInit(int declar, char* var){
-    if (declar){
+nodeType *chkInit(int declar, char* var,int type){
+    if (!declar){
         if ((getSymbolEntry(var)) == 0){
-            return id(var);
+            return id(var,type);
         }else{
             fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
         }
     }else{
         if ((getSymbolEntry(var)) != 0){
-            return id(var);
+            return id(var,type);
         }else{
             fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' not declared\n",lineno,var); exit(0);
         }
@@ -157,7 +159,7 @@ nodeType *fl(double value) {
     return p;
 }
 
-nodeType *id(char* name) {
+nodeType *id(char* name,int type) {
     nodeType *p;
     size_t nodeSize;
     symbol_entry *e;
@@ -168,18 +170,22 @@ nodeType *id(char* name) {
         yyerror("out of memory");
         if (getSymbolEntry(name) == 0){
             e = (symbol_entry*)malloc(sizeof(symbol_entry));
-            e->type = typeId;
+            e->type = type;
             e->name = name;
-            e->addr = ADDR++; /* Checks will needed to be added for block levels */
+            printf("About to GetPos()\n");
+            e->addr = GetPos(); /* Checks will needed to be added for block levels */
             e->blk_level = getCurrentLevel(); /* Get the curr blk lvl AK-KB */
+            printf("About to set getCurrentOffset()\n");
             e->size = 1; /* For now size is staticly set to 1 AK-KB */
-            if (ARGs < 0 || ARGs >= 3) {
-                e->offset = ARGs++;
+            if (getCurrentOffset() < 0 || getCurrentOffset() >= 3) {
+                e->offset = incrementCurrentOffset();
             }else{
-                ARGs = 3;
-                e->offset = ARGs++;
+                setCurrentOffset(3);
+                e->offset = incrementCurrentOffset();
             }
+            varCount++;
             addSymbol(e,lineno);
+            printf("About to addSymbols\n");
         }
 
     /* copy information */
@@ -213,7 +219,7 @@ nodeType *opr(int oper, int nops, ...) {
 
 void freeNode(nodeType *p) {
     int i;
-
+    printf("Called freeNode()\n");
     if (!p) return;
     if (p->type == typeOpr) {
         for (i = 0; i < p->opr.nops; i++)
@@ -235,13 +241,20 @@ int main(int argc,char** argv) {
     {
         printf("%s \n", "File Error, No Parameters Passed!");
     }*/
-        lineno++;
-        ARGs = 3;
-        prog_addr = 1;
-        printf("%04d Prog varlen:%d addr:%d\n",prog_addr,0,4); /* Insert program start header */
-        prog_addr = prog_addr + 3;
-        pushSymbolTable();
-        yyparse();
-        popSymbolTable();
+    binary = 1;
+    varCount = 0;
+    strcpy(fileName,"test.apm");
+    ARGs = 3;
+    lineno = 1;
+    prog_addr = 1;
+    setCurrentOffset(3);
+    begin_prog();           /* Generate code to begin a program */
+    pushSymbolTable();
+    yyparse();
+    end_prog(varCount); /* Cue pstack for end of program */
+    if (!writeOut(fileName,binary)) {
+        fprintf(stderr,"ERROR @ Code Gen:: No code compiled. Problems detected.");
+    }
+    popSymbolTable();
     return 0;
 }

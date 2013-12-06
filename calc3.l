@@ -4,8 +4,10 @@
 #include "calc3.h"
 #include "y.tab.h"
 #include <string.h> /* Added by Kyle Blagg */
+#include "globals.h"
 void yyerror(char *);
 void setStr(char*);
+
 %}
 /* Modified line: Added '+' by Kyle Blagg */
 /* Modified: Added case to detect float. AK-KB */
@@ -26,6 +28,7 @@ void setStr(char*);
 "do" 		return DO;
 "repeat"	return REPEAT;
 "until" 	return UNTIL;
+"END"		return QUIT;
 [-()<>=+*/;{},] {
     return *yytext;
 }
@@ -46,7 +49,7 @@ void setStr(char*);
             }
 \n          {lineno = lineno + 1;}
 [ \t]+        ;       /* ignore whitespace */
-<<EOF>>      {printf("%04d EndProg\n",prog_addr++); exit(0);}
+<<EOF>>      { exit(0);}
 .               yyerror("Unknown character");
 %%
 int yywrap(void) {

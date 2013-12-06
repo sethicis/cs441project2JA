@@ -24,9 +24,7 @@
 #include <list>
 #include <cstdlib>
 #include "symbol_table.h"
-extern "C" {
 #include "calc3.h"
-}
 
 using namespace std;
 

@@ -16,11 +16,10 @@ struct symbol_entry {
 	int 	offset;
    union { /* Added */
      int i;
-     double f;
+     float f;
    }val;
 	const char *name; /* changed JWJ */
 };
-    int ADDR;
 
 extern void printSymbolTable();
 extern void popSymbolTable();
