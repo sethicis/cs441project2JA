@@ -24,18 +24,19 @@ void yyerror(char *s);
 %union {
     int iValue;                 /* integer value */
     char* sIndex;                /* symbol table index */
-    double fValue;
+    float fValue;
     nodeType *nPtr;             /* node pointer */
 };
 
 %token <iValue> INTEGER
-%token <fValue> DOUBLE
+%token <fValue> FLOAT
 %token <sIndex> VARIABLE
-%token WHILE IF PRINT QUIT
+%token BEGIN_PROC END_PROC QUIT
+%token WHILE IF PRINT
 %token DO REPEAT UNTIL
 %nonassoc IFX
 %nonassoc ELSE
-%right DB INT
+%right FL INT
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
 %left '*' '/'
@@ -58,11 +59,11 @@ function:
 stmt:
           ';'                            { $$ = opr(';', 2, NULL, NULL); }
         | expr ';'                       { $$ = $1; }
-        | DB mLine ';'                   { $$ = opr(',', 1, $2); }
+        | FL mLine ';'                   { $$ = opr(',', 1, $2); }
         | INT mLine ';'                  { $$ = opr(',', 1, $2); }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
         | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(1,$1,0), $3); }
-        | DB VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(0,$2,typeFloat), $4); }
+        | FL VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(0,$2,typeFloat), $4); }
         | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(0,$2,typeCon), $4);}
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
@@ -70,6 +71,7 @@ stmt:
         | DO stmt WHILE '(' expr ')' ';' { $$ = opr(DO, 2, $2, $5); }
         | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
+		| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
         ;
 
 stmt_list:
@@ -79,10 +81,10 @@ stmt_list:
 
 expr:
           INTEGER               { $$ = con($1); }
-        | DOUBLE                { $$ = fl($1); }
+        | FLOAT                { $$ = fl($1); }
         | VARIABLE              { $$ = chkInit(1,$1,0); }
         | INT VARIABLE          { $$ = chkInit(0,$2,typeCon); }
-        | DB VARIABLE           { $$ = chkInit(0,$2,typeFloat); }
+        | FL VARIABLE           { $$ = chkInit(0,$2,typeFloat); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
@@ -174,18 +176,11 @@ nodeType *id(char* name,int type) {
             e->name = name;
             printf("About to GetPos()\n");
             e->addr = GetPos(); /* Checks will needed to be added for block levels */
-            e->blk_level = getCurrentLevel(); /* Get the curr blk lvl AK-KB */
             printf("About to set getCurrentOffset()\n");
             e->size = 1; /* For now size is staticly set to 1 AK-KB */
-            if (getCurrentOffset() < 0 || getCurrentOffset() >= 3) {
-                e->offset = incrementCurrentOffset();
-            }else{
-                setCurrentOffset(3);
-                e->offset = incrementCurrentOffset();
-            }
             varCount++;
             addSymbol(e,lineno);
-            printf("About to addSymbols\n");
+            printf("Finished addSymbols\n");
         }
 
     /* copy information */
@@ -247,11 +242,10 @@ int main(int argc,char** argv) {
     ARGs = 3;
     lineno = 1;
     prog_addr = 1;
-    setCurrentOffset(3);
     begin_prog();           /* Generate code to begin a program */
     pushSymbolTable();
     yyparse();
-    end_prog(varCount); /* Cue pstack for end of program */
+    end_prog(getTotalSymbolTableSize()); /* Cue pstack for end of program */
     if (!writeOut(fileName,binary)) {
         fprintf(stderr,"ERROR @ Code Gen:: No code compiled. Problems detected.");
     }

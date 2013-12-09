@@ -42,10 +42,6 @@ typedef struct nodeTypeTag {
 extern "C" {
 #endif
     int ex(nodeType*);
-    int getCurrentOffset(void);
-    void setCurrentOffset(int);
-    int incrementCurrentOffset(void);
-    int getLastOffset(void);
 #ifdef __cplusplus
 }
 #endif

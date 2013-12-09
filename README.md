@@ -39,3 +39,20 @@ For example:
 
 Continue execution of statements until satisfied, then use 
 Ctrl+D for "EOF" so it can associate program end for P-code Generation.
+
+Milestone C
+=================
+
+NOT WORKING:
+float variables are still not tested.
+blocking is not tested by code in place.
+condition statements and loops some code is in place, but untested.
+P-stack code is in place to recognize begin and end statements,
+but is not fully tested with latest changes.
+Code in general is still very much work in progress.
+Issue right now, trying to figure out how to determine jump
+locations for conditional statements and loops.
+Repeate until and do while loops have p-code in place, but are untested.
+
+Iteration by Kyle.
+Last modified: 12-8-13

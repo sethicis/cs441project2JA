@@ -5,6 +5,7 @@
 #include "y.tab.h"
 #include <string.h> /* Added by Kyle Blagg */
 #include "globals.h"
+#include "symbol_table.h"
 void yyerror(char *);
 void setStr(char*);
 
@@ -15,7 +16,7 @@ void setStr(char*);
 /* Modified by Kyle Blagg, removed '\n' and added a special rule just for it */
 
 %%
-"double"        return DB;
+"float"        return FL;
 "int"           return INT;
 ">="            return GE;
 "<="            return LE;
@@ -25,10 +26,12 @@ void setStr(char*);
 "if"            return IF;
 "else"          return ELSE;
 "print"         return PRINT;
-"do" 		return DO;
-"repeat"	return REPEAT;
-"until" 	return UNTIL;
-"END"		return QUIT;
+"do"        return DO;
+"repeat"    return REPEAT;
+"until"     return UNTIL;
+"begin"		{pushSymbolTable(); return BEGIN_PROC;}
+"end"       return END_PROC;
+"quit"      return QUIT;
 [-()<>=+*/;{},] {
     return *yytext;
 }
@@ -40,7 +43,7 @@ void setStr(char*);
             }
 [0-9]*\.[0-9]+ {
                     yylval.fValue = atof(yytext);
-                    return DOUBLE;
+                    return FLOAT;
                 }
 
 0|[1-9][0-9]* { 
@@ -49,7 +52,7 @@ void setStr(char*);
             }
 \n          {lineno = lineno + 1;}
 [ \t]+        ;       /* ignore whitespace */
-<<EOF>>      { exit(0);}
+<<EOF>>      { return QUIT;}
 .               yyerror("Unknown character");
 %%
 int yywrap(void) {

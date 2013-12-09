@@ -30,7 +30,7 @@ BIN_NAME   = cs441-sample
 
 #calc3
 calc3p: $(OBJECTS) $(HEADERS)
-	g++ -Wall -g $(OBJECTS) -o $@
+	g++ -Wall -g $(OBJECTS) -o $@ -ll
 calc3p.o: calc3p.cc
 	g++ -c calc3p.cc
 y.tab.o: y.tab.c calc3.y
