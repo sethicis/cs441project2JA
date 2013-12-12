@@ -48,7 +48,12 @@ void yyerror(char *s);
 
 program:
         function                { return 0; }
-        QUIT                    { yyerror("Terminating"); return 0; }
+        |QUIT                    { return 0; }
+/*
+|program error '\n'	 {yyerrok; yyerror("Missed something"); }
+|error ';'			{yyerrok; yyerror("Missed a ';'");}
+|error '\n'			{ yyerrok; yyerror("missed something");}
+ */
         ;
 
 function:
@@ -72,6 +77,15 @@ stmt:
         | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
 		| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
+/*
+		| WHILE '(' error ')' stmt        { yyerrok; yyerror("Error occured in: "); }
+| IF '(' error ')' stmt %prec IFX { yyerrok; yyerror("Error occured in: ");}
+		| IF '(' error ')' stmt ELSE stmt { yyerrok; yyerror("Error occured in: ");}
+| DO stmt WHILE '(' error ')' ';' { yyerrok; yyerror("Error occurred in: ");}
+| REPEAT stmt UNTIL '(' error ')' ';' { yyerrok; yyerror("Error occurred in: ");}
+| '{' error '}'              { yyerrok; yyerror("Error occurred in: ");}
+|stmt error '\n'			{yyerrok; yyerror("Error seen");}
+ */
         ;
 
 stmt_list:
@@ -97,6 +111,11 @@ expr:
         | expr NE expr          { $$ = opr(NE, 2, $1, $3); }
         | expr EQ expr          { $$ = opr(EQ, 2, $1, $3); }
         | '(' expr ')'          { $$ = $2; }
+/*
+| '(' error ')'			{ yyerrok; printf("Error seeen\n");}
+| expr error '\n'		{ yyerrok; printf("Error seen\n");}
+ */
+
         ;
 mLine:
          VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(0,$1,0), $3))); }
@@ -224,7 +243,8 @@ void freeNode(nodeType *p) {
 }
 
 void yyerror(char *s) {
-    fprintf(stderr, "%s\n", s);
+	/*fprintf(stderr, "Error called");*/
+    fprintf(stderr, "%s @ line# %d\n", s,lineno);
 }
 
 int main(int argc,char** argv) {

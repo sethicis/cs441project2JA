@@ -14,8 +14,16 @@ void setStr(char*);
 /* Modified: Added case to detect float. AK-KB */
 /* Increment the lineno count */
 /* Modified by Kyle Blagg, removed '\n' and added a special rule just for it */
-
+%x C_COMMENT
+%x CC_COMMENT
 %%
+
+"//"						{printf("Start C++ comment\n");BEGIN(CC_COMMENT);}
+<CC_COMMENT>\n			{printf("End C++\n");lineno = lineno + 1;BEGIN(INITIAL);}
+"/*"						{BEGIN(C_COMMENT);}
+<C_COMMENT>\n				{lineno = lineno + 1;}
+<C_COMMENT>"*/"				{BEGIN(INITIAL);}
+<C_COMMENT,CC_COMMENT>.	{ /* Do nothing */ }
 "float"        return FL;
 "int"           return INT;
 ">="            return GE;
