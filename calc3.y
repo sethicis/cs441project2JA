@@ -137,8 +137,13 @@ nodeType *chkInit(int declar, char* var,int type){
     if (!declar){
         if ((getSymbolEntry(var)) == 0){
             return id(var,type);
-        }else{
-            fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
+		/* Check if the variable exists in the current scope */
+        }else if (getSymbolEntry(var)->blk_level != getCurrentLevel()){
+			return id(var,type);
+		}
+		else
+		{
+			fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
         }
     }else{
         if ((getSymbolEntry(var)) != 0){

@@ -83,13 +83,13 @@ int ex(nodeType *p) {
 			currP = GetPos();/* Save the current position right before the statement */
 			ex(p->opr.op[1]); /* Statement code */
 			tmp = I_refToPos(currP - 1); /* Get a reference to the placeholder */
-			std::cout << "About to I_refToPos()" << std::endl;
+			//std::cout << "About to I_refToPos()" << std::endl;
 			*tmp = GetPos(); /* Set the placeholder to the condition code */
 			
 			ex(p->opr.op[0]); /* Condition code */
 			addI(I_JMP_IF_TRUE); /* If true run the statement code until false */
 			addI(currP);		/* Add address of statement code */
-			std::cout << "After I_refToPos()" << std::endl;
+			//std::cout << "After I_refToPos()" << std::endl;
 			tmp = NULL;
 			return 0;
 			//while(ex(p->opr.op[0])) ex(p->opr.op[1]); return 0;
@@ -294,6 +294,7 @@ int ex(nodeType *p) {
 
 // Check if Variable Exists Within Scope and Lower Scopes
 void scopeCheck(const char *var_name){
+/*	NOTE::: Commented out because code MAY be depricated...
 	int scope_level = getCurrentLevel();
 	int table_size;
 
@@ -302,7 +303,7 @@ void scopeCheck(const char *var_name){
 	// If variable name is no where in the entire stack
 	if(!(getSymbolEntry(var_name)))
 	{
-		std::cout << "Variable hasn't been declared or doesn't exist!";
+		std::cout << "Variable hasn't been declared or doesn't exist!" <<
 		std::endl << std::endl;
 	}
 	else // Variable name exists in entire stack somewhere
@@ -343,7 +344,7 @@ void scopeCheck(const char *var_name){
 				}
 			}
 		}
-	}
+	}*/
 }
 	 
 /* Simple helper function that notifies the caller what type of
