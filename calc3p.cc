@@ -77,7 +77,7 @@ int ex(nodeType *p) {
 			//do{ex(p->opr.op[0]);}while(!(ex(p->opr.op[1]))); return 0;
 		case WHILE: /* P-stack code for while loop, implemented in a do while form */
 			//addI(I_CONSTANT);
-			addI(0);		/* Push constant false onto stack */
+		//	addI(0);		/* Push constant false onto stack */
 			addI(I_JMP_IF_FALSE);
 			addI(0);		/* Put placeholder on stack */
 			currP = GetPos();/* Save the current position right before the statement */

@@ -13,7 +13,7 @@
 nodeType *opr(int oper, int nops, ...);
 nodeType *id(char* i,int type);
 nodeType *con(int value);
-nodeType *fl(double value);
+nodeType *fl(float value);
 nodeType *chkInit(int declar,char* name,int type);
 void freeNode(nodeType *p);
 int yylex(void);
@@ -135,20 +135,27 @@ mLine:
  */
 nodeType *chkInit(int declar, char* var,int type){
     if (!declar){
-        if ((getSymbolEntry(var)) == 0){
-            return id(var,type);
+        if ((getSymbolEntry(var)) == 0)
+	{
+        	return id(var,type);
 		/* Check if the variable exists in the current scope */
-        }else if (getSymbolEntry(var)->blk_level != getCurrentLevel()){
-			return id(var,type);
-		}
-		else
-		{
-			fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
         }
-    }else{
-        if ((getSymbolEntry(var)) != 0){
+	else if (getSymbolEntry(var)->blk_level != getCurrentLevel())
+	{
+		return id(var,type);
+	}
+	else
+	{
+		fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
+        }
+    }
+    else{
+        if ((getSymbolEntry(var)) != 0)
+	{
             return id(var,type);
-        }else{
+        }
+	else
+	{
             fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' not declared\n",lineno,var); exit(0);
         }
     }
@@ -170,7 +177,7 @@ nodeType *con(int value) {
     return p;
 }
 
-nodeType *fl(double value) {
+nodeType *fl(float value) {
     nodeType *p;
     size_t nodeSize;
     
