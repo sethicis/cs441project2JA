@@ -8,6 +8,7 @@
 #include "symbol_table.h" //For symbol table operations
 #include "pstcode.h"		//For p-stack opcode instructions
 #include "PstackInterface.h"//For legacy C friendly interaction with pstack class
+#include <iostream>
 
 int retval;
 WORD retVal;
@@ -51,7 +52,9 @@ int ex(nodeType *p) {
 				//begin_proc(GetPos()+1);
 				ex(p->opr.op[0]); //Does not support return values right now
 				//end_proc(getCurrentSymbolTableSize());
+				
 				popSymbolTable();
+				
 				return 0;
 			case DO:
 				currP = GetPos();
@@ -67,20 +70,25 @@ int ex(nodeType *p) {
 				ex(p->opr.op[1]);
 				addI(I_JMP_IF_FALSE);
 				addI(currP);
+				return 0;
 				//do{ex(p->opr.op[0]);}while(!(ex(p->opr.op[1]))); return 0;
 			case WHILE: /* P-stack code for while loop, implemented in a do while form */
-				addI(I_CONSTANT);
+				//addI(I_CONSTANT);
 				addI(0);		/* Push constant false onto stack */
 				addI(I_JMP_IF_FALSE);
 				addI(0);		/* Put placeholder on stack */
 				currP = GetPos();/* Save the current position right before the statement */
 				ex(p->opr.op[1]); /* Statement code */
 				tmp = I_refToPos(currP - 1); /* Get a reference to the placeholder */
+				std::cout << "About to I_refToPos()" << std::endl;
 				*tmp = GetPos(); /* Set the placeholder to the condition code */
+				
 				ex(p->opr.op[0]); /* Condition code */
 				addI(I_JMP_IF_TRUE); /* If true run the statement code until false */
 				addI(currP);		/* Add address of statement code */
+				std::cout << "After I_refToPos()" << std::endl;
 				tmp = NULL;
+				return 0;
 				//while(ex(p->opr.op[0])) ex(p->opr.op[1]); return 0;
        	case IF:
 				//if (ex(p->opr.op[0]))

@@ -7,7 +7,6 @@
 #include "globals.h"
 #include "symbol_table.h"
 void yyerror(char *);
-void setStr(char*);
 
 %}
 /* Modified line: Added '+' by Kyle Blagg */
@@ -18,10 +17,10 @@ void setStr(char*);
 %x CC_COMMENT
 %%
 
-"//"						{printf("Start C++ comment\n");BEGIN(CC_COMMENT);}
-<CC_COMMENT>\n			{printf("End C++\n");lineno = lineno + 1;BEGIN(INITIAL);}
+"//"						{BEGIN(CC_COMMENT);}
+<CC_COMMENT>\n			{lineno = lineno + 1;BEGIN(INITIAL);printf("Current line# %d\n",lineno);}
 "/*"						{BEGIN(C_COMMENT);}
-<C_COMMENT>\n				{lineno = lineno + 1;}
+<C_COMMENT>\n				{lineno = lineno + 1;printf("Current line# %d\n",lineno);}
 <C_COMMENT>"*/"				{BEGIN(INITIAL);}
 <C_COMMENT,CC_COMMENT>.	{ /* Do nothing */ }
 "float"        return FL;
@@ -46,7 +45,6 @@ void setStr(char*);
 
 [a-zA-Z]+   {
                 yylval.sIndex = strdup(yytext);
-                //setStr(yytext);
                 return VARIABLE;
             }
 [0-9]*\.[0-9]+ {
@@ -58,7 +56,7 @@ void setStr(char*);
                 yylval.iValue = atoi(yytext);
                 return INTEGER;
             }
-\n          {lineno = lineno + 1;}
+\n          {lineno = lineno + 1;printf("Current line# %d\n",lineno);}
 [ \t]+        ;       /* ignore whitespace */
 <<EOF>>      { return QUIT;}
 .               yyerror("Unknown character");

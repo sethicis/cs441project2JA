@@ -193,13 +193,13 @@ nodeType *id(char* name,int type) {
             e = (symbol_entry*)malloc(sizeof(symbol_entry));
             e->type = type;
             e->name = name;
-            printf("About to GetPos()\n");
+            //printf("About to GetPos()\n");
             e->addr = GetPos(); /* Checks will needed to be added for block levels */
-            printf("About to set getCurrentOffset()\n");
+            //printf("About to set getCurrentOffset()\n");
             e->size = 1; /* For now size is staticly set to 1 AK-KB */
             varCount++;
             addSymbol(e,lineno);
-            printf("Finished addSymbols\n");
+            //printf("Finished addSymbols\n");
         }
 
     /* copy information */
@@ -233,7 +233,7 @@ nodeType *opr(int oper, int nops, ...) {
 
 void freeNode(nodeType *p) {
     int i;
-    printf("Called freeNode()\n");
+    //printf("Called freeNode()\n");
     if (!p) return;
     if (p->type == typeOpr) {
         for (i = 0; i < p->opr.nops; i++)
