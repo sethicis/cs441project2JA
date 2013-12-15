@@ -54,9 +54,18 @@ int ex(nodeType *p) {
         switch(p->opr.oper) {
 		case BEGIN_PROC:
 			printSymbolTable();
-			//begin_proc(GetPos()+1);
+			addI(I_JR);
+			addI(0);
+			currP = GetPos() - 1;
+			begin_proc(GetPos()+1);
 			ex(p->opr.op[0]); //Does not support return values right now
-			//end_proc(getCurrentSymbolTableSize());
+			std::cout << "Current symbol table size: " << getCurrentSymbolTableSize() << std::endl;
+			end_proc(getCurrentSymbolTableSize());
+			/* Set the relative jmp just after the process ends */
+			*I_refToPos(currP) = GetPos() - currP + 1;
+			addI(I_CALL);
+			addI(getCurrentLevel());
+			addI(currP+1); /* Call the process block just made */
 			popSymbolTable();
 			return 0;
 		case DO:
@@ -76,8 +85,8 @@ int ex(nodeType *p) {
 			return 0;
 			//do{ex(p->opr.op[0]);}while(!(ex(p->opr.op[1]))); return 0;
 		case WHILE: /* P-stack code for while loop, implemented in a do while form */
-			//addI(I_CONSTANT);
-		//	addI(0);		/* Push constant false onto stack */
+			addI(I_CONSTANT);
+			addI(0);		/* Push constant false onto stack */
 			addI(I_JMP_IF_FALSE);
 			addI(0);		/* Put placeholder on stack */
 			currP = GetPos();/* Save the current position right before the statement */

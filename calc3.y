@@ -67,7 +67,7 @@ stmt:
         | FL mLine ';'                   { $$ = opr(',', 1, $2); }
         | INT mLine ';'                  { $$ = opr(',', 1, $2); }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
-        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(1,$1,0), $3); }
+        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(1,$1,typeId), $3); }
         | FL VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(0,$2,typeFloat), $4); }
         | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(0,$2,typeCon), $4);}
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
@@ -96,7 +96,7 @@ stmt_list:
 expr:
           INTEGER               { $$ = con($1); }
         | FLOAT                { $$ = fl($1); }
-        | VARIABLE              { $$ = chkInit(1,$1,0); }
+        | VARIABLE              { $$ = chkInit(1,$1,typeId); }
         | INT VARIABLE          { $$ = chkInit(0,$2,typeCon); }
         | FL VARIABLE           { $$ = chkInit(0,$2,typeFloat); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
@@ -118,9 +118,9 @@ expr:
 
         ;
 mLine:
-         VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(0,$1,0), $3))); }
-        |VARIABLE '=' expr              { $$ = opr('=',2, chkInit(0,$1,0), $3); }
-        |VARIABLE ',' mLine             { $$ = opr(',', 2, $3,chkInit(0,$1,0)); }
+         VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(0,$1,typeId), $3))); }
+        |VARIABLE '=' expr              { $$ = opr('=',2, chkInit(0,$1,typeId), $3); }
+        |VARIABLE ',' mLine             { $$ = opr(',', 2, $3,chkInit(0,$1,typeId)); }
         |VARIABLE                       { $$ = chkInit(0,$1,0); }
         ;
 
@@ -134,21 +134,22 @@ mLine:
  @param var: This contains the variable name.
  */
 nodeType *chkInit(int declar, char* var,int type){
-    if (!declar){
-        if ((getSymbolEntry(var)) == 0)
+    if (!declar)
 	{
+        if ((getSymbolEntry(var)) == 0)
+		{
         	return id(var,type);
 		/* Check if the variable exists in the current scope */
         }
-	else if (getSymbolEntry(var)->blk_level != getCurrentLevel())
-	{
-		return id(var,type);
+		else if (getSymbolEntry(var)->blk_level != getCurrentLevel())
+		{
+			return id(var,type);
+		}
+		else
+		{
+			fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
+			}
 	}
-	else
-	{
-		fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
-        }
-    }
     else{
         if ((getSymbolEntry(var)) != 0)
 	{
@@ -201,7 +202,19 @@ nodeType *id(char* name,int type) {
     nodeSize = SIZEOF_NODETYPE + sizeof(idNodeType);
     if ((p = malloc(nodeSize)) == NULL)
         yyerror("out of memory");
-        if (getSymbolEntry(name) == 0){
+		if (getSymbolEntry(name) == 0){
+			e = (symbol_entry*)malloc(sizeof(symbol_entry));
+			e->type = type;
+			e->name = name;
+			//printf("About to GetPos()\n");
+			e->addr = GetPos(); /* Checks will needed to be added for block levels */
+			//printf("About to set getCurrentOffset()\n");
+			e->size = 1; /* For now size is staticly set to 1 AK-KB */
+			varCount++;
+			addSymbol(e,lineno);
+			//printf("Finished addSymbols\n");
+		}else if (getSymbolEntry(name)->blk_level != getCurrentLevel())
+		{
             e = (symbol_entry*)malloc(sizeof(symbol_entry));
             e->type = type;
             e->name = name;
@@ -213,7 +226,6 @@ nodeType *id(char* name,int type) {
             addSymbol(e,lineno);
             //printf("Finished addSymbols\n");
         }
-
     /* copy information */
     p->type = typeId;
     p->id.s = name;
@@ -268,7 +280,7 @@ int main(int argc,char** argv) {
     {
         printf("%s \n", "File Error, No Parameters Passed!");
     }*/
-    binary = 1;
+    binary = 1; /* Toggles the format of the p-stack code. binary vs numeric */
     varCount = 0;
     strcpy(fileName,"test.apm");
     ARGs = 3;

@@ -3,6 +3,7 @@
 #include <stack>
 
 std::stack<int>* proc_Start_Pos;
+std::stack<int>* proc_Addr_Pos;
 PstackCode* code; /* Global P stack pointer */
 
 void chkDef(){
@@ -34,6 +35,9 @@ void end_prog(int varlen){
 }
 void begin_proc(int startPos){
 	chkDef();
+	addI(I_JR);
+	addI(0);
+	
 	proc_Start_Pos->push(startPos);
 	code->begin_proc();
 }
