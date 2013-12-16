@@ -69,7 +69,10 @@ int ex(nodeType *p) {
 			popSymbolTable();
 			return 0;
 		case FOR:
+			std::cout << "Beginning For Loop!" << std::endl;
 
+
+			std::cout << "Ending For Loop!" << std::endl;
 
 			return 0;
 		case DO:
