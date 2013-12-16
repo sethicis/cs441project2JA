@@ -11,7 +11,7 @@
 
 /* prototypes */
 nodeType *opr(int oper, int nops, ...);
-nodeType *id(char* i,int type);
+nodeType *id(char* i,int type,declar);
 nodeType *con(int value);
 nodeType *fl(float value);
 nodeType *chkInit(int declar,char* name,int type);
@@ -138,12 +138,12 @@ nodeType *chkInit(int declar, char* var,int type){
 	{
         if ((getSymbolEntry(var)) == 0)
 		{
-        	return id(var,type);
+        	return id(var,type,declar);
 		/* Check if the variable exists in the current scope */
         }
 		else if (getSymbolEntry(var)->blk_level != getCurrentLevel())
 		{
-			return id(var,type);
+			return id(var,type,declar);
 		}
 		else
 		{
@@ -153,7 +153,7 @@ nodeType *chkInit(int declar, char* var,int type){
     else{
         if ((getSymbolEntry(var)) != 0)
 	{
-            return id(var,type);
+            return id(var,type,declar);
         }
 	else
 	{
@@ -193,7 +193,7 @@ nodeType *fl(float value) {
     return p;
 }
 
-nodeType *id(char* name,int type) {
+nodeType *id(char* name,int type,int declar) {
     nodeType *p;
     size_t nodeSize;
     symbol_entry *e;
@@ -213,7 +213,7 @@ nodeType *id(char* name,int type) {
 			varCount++;
 			addSymbol(e,lineno);
 			//printf("Finished addSymbols\n");
-		}else if (getSymbolEntry(name)->blk_level != getCurrentLevel())
+		}else if ((getSymbolEntry(name)->blk_level != getCurrentLevel()) && !declar)
 		{
             e = (symbol_entry*)malloc(sizeof(symbol_entry));
             e->type = type;

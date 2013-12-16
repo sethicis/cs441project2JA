@@ -54,18 +54,18 @@ int ex(nodeType *p) {
         switch(p->opr.oper) {
 		case BEGIN_PROC:
 			printSymbolTable();
-			addI(I_JR);
-			addI(0);
-			currP = GetPos() - 1;
+			//addI(I_JR);
+			//addI(0);
+			//currP = GetPos() - 1;
 			begin_proc(GetPos()+1);
 			ex(p->opr.op[0]); //Does not support return values right now
 			std::cout << "Current symbol table size: " << getCurrentSymbolTableSize() << std::endl;
 			end_proc(getCurrentSymbolTableSize());
 			/* Set the relative jmp just after the process ends */
-			*I_refToPos(currP) = GetPos() - currP + 1;
-			addI(I_CALL);
-			addI(getCurrentLevel());
-			addI(currP+1); /* Call the process block just made */
+			//*I_refToPos(currP) = GetPos() - currP + 1;
+			//addI(I_CALL);
+			//addI(getCurrentLevel());
+			//addI(currP+1); /* Call the process block just made */
 			popSymbolTable();
 			return 0;
 		case DO:
