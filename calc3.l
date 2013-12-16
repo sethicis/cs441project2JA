@@ -27,6 +27,8 @@ void yyerror(char *);
 "float"        	return FL;
 "int"           return INT;
 ">="            return GE;
+"step"		return STEP;
+"to"		return TO;
 "<="            return LE;
 "=="            return EQ;
 "!="            return NE;

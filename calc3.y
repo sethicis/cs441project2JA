@@ -11,7 +11,7 @@
 
 /* prototypes */
 nodeType *opr(int oper, int nops, ...);
-nodeType *id(char* i,int type,int declar);
+nodeType *id(char* i,int type, int declar);
 nodeType *con(int value);
 nodeType *fl(float value);
 nodeType *chkInit(int declar,char* name,int type);
@@ -41,6 +41,7 @@ void yyerror(char *s);
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
 %left '*' '/'
+%token STEP TO
 %nonassoc UMINUS
 
 %type <nPtr> stmt expr stmt_list mLine forLine
@@ -78,7 +79,7 @@ stmt:
         | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
 	| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
-	| FOR '(' forLine 'step' INTEGER 'to'  INTEGER ')' stmt { $$ = opr(FOR, 4, $3, $5, $7, $9); }
+	| FOR '(' forLine STEP INTEGER TO INTEGER ')' stmt { $$ = opr(FOR, 4, $3, con($5), con($7), $9); }
 /*
 		| WHILE '(' error ')' stmt        { yyerrok; yyerror("Error occured in: "); }
 | IF '(' error ')' stmt %prec IFX { yyerrok; yyerror("Error occured in: ");}
@@ -128,6 +129,7 @@ mLine:
 
 forLine:
 	VARIABLE '=' expr		{ $$ = opr('=', 2, chkInit(1, $1, typeId), $3); }
+	| /* NULL */
 	;
 
 %%
@@ -198,7 +200,7 @@ void scopeCheck(const char *var_name){
 nodeType *chkInit(int declar, char* var,int type){
     
     fprintf(stderr, "Current Block Level: %d\n\n", getCurrentLevel());
-    //scopeCheck(var); 
+ //   scopeCheck(var); 
     if (!declar)
 	{
         if ((getSymbolEntry(var)) == 0)
