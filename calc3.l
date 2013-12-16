@@ -23,22 +23,25 @@ void yyerror(char *);
 <C_COMMENT>\n				{lineno = lineno + 1;printf("Current line# %d\n",lineno);}
 <C_COMMENT>"*/"				{BEGIN(INITIAL);}
 <C_COMMENT,CC_COMMENT>.	{ /* Do nothing */ }
-"float"        return FL;
+
+"float"        	return FL;
 "int"           return INT;
 ">="            return GE;
 "<="            return LE;
 "=="            return EQ;
 "!="            return NE;
+"for"		return FOR;
 "while"         return WHILE;
 "if"            return IF;
 "else"          return ELSE;
 "print"         return PRINT;
-"do"        return DO;
-"repeat"    return REPEAT;
-"until"     return UNTIL;
+"do"        	return DO;
+"repeat"    	return REPEAT;
+"until"    	return UNTIL;
 "begin"		{pushSymbolTable(); return BEGIN_PROC;}
-"end"       return END_PROC;
-"quit"      return QUIT;
+"end"   	return END_PROC;
+"quit"      	return QUIT;
+
 [-()<>=+*/;{},] {
     return *yytext;
 }
@@ -47,19 +50,25 @@ void yyerror(char *);
                 yylval.sIndex = strdup(yytext);
                 return VARIABLE;
             }
+
 [0-9]*\.[0-9]+ {
                     yylval.fValue = atof(yytext);
                     return FLOAT;
-                }
+               }
 
 0|[1-9][0-9]* { 
-                yylval.iValue = atoi(yytext);
-                return INTEGER;
-            }
+              	yylval.iValue = atoi(yytext);
+              	return INTEGER;
+              }
+
 \n          {lineno = lineno + 1;printf("Current line# %d\n",lineno);}
+
 [ \t]+        ;       /* ignore whitespace */
+
 <<EOF>>      { return QUIT;}
+
 .               yyerror("Unknown character");
+
 %%
 int yywrap(void) {
     return 1;
