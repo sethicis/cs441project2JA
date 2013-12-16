@@ -68,6 +68,10 @@ int ex(nodeType *p) {
 			addI(currP+1); /* Call the process block just made */
 			popSymbolTable();
 			return 0;
+		case FOR:
+
+
+			return 0;
 		case DO:
 			currP = GetPos();
 			ex(p->opr.op[0]); /* Statement */

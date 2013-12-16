@@ -33,6 +33,7 @@ void yyerror(char *s);
 %token <sIndex> VARIABLE
 %token BEGIN_PROC END_PROC QUIT
 %token WHILE IF PRINT
+%token FOR
 %token DO REPEAT UNTIL
 %nonassoc IFX
 %nonassoc ELSE
@@ -42,7 +43,7 @@ void yyerror(char *s);
 %left '*' '/'
 %nonassoc UMINUS
 
-%type <nPtr> stmt expr stmt_list mLine
+%type <nPtr> stmt expr stmt_list mLine forLine
 
 %%
 
@@ -76,7 +77,8 @@ stmt:
         | DO stmt WHILE '(' expr ')' ';' { $$ = opr(DO, 2, $2, $5); }
         | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
-		| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
+	| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
+	| FOR '(' forLine 'step' INTEGER 'to'  INTEGER ')' stmt { $$ = opr(FOR, 4, $3, $5, $7, $9); }
 /*
 		| WHILE '(' error ')' stmt        { yyerrok; yyerror("Error occured in: "); }
 | IF '(' error ')' stmt %prec IFX { yyerrok; yyerror("Error occured in: ");}
@@ -124,9 +126,69 @@ mLine:
         |VARIABLE                       { $$ = chkInit(0,$1,0); }
         ;
 
+forLine:
+	VARIABLE '=' expr		{ $$ = opr('=', 2, chkInit(1, $1, typeId), $3); }
+	;
+
 %%
 
 #define SIZEOF_NODETYPE ((char *)&p->con - (char *)p)
+
+// Check if Variable Exists Within Scope and Lower Scopes
+void scopeCheck(const char *var_name){
+//	NOTE::: Commented out because code MAY be depricated...
+	int scope_level = getCurrentLevel();
+	int table_size;
+	int i, j;
+
+	fprintf(stderr, "Variable Reference Called(I think...)! Checking Scope Level for Variable!\n\n");
+
+	// If variable name is no where in the entire stack
+	if(!(getSymbolEntry(var_name)))
+	{
+		fprintf(stderr, "Variable hasn't been declared or doesn't exist!\n\n");
+	}
+	else // Variable name exists in entire stack somewhere
+	{
+		// Do a Top-Bottom Scope Level Depth Check
+		for(j = scope_level; j >= 0; j--)
+		{
+			// Obtain Current Activation Record Size
+			table_size = getSymbolTableSize(j);
+
+			// Check all variables within record
+			for(i = table_size; i > 0; i--)
+			{
+//				std::cout << "Current Symbol Table Size: ";
+//				std::cout << i << std::endl;
+//				std::cout << "Current Scope Level: ";
+//				std::cout << j << std::endl;
+				//std::cout << getSymbolEntryByRelAddr(j, i + 2)->name << " -> Variable Name" << std::endl;				
+
+				// If Variable Names Match
+
+				// Note: getSymbolEntryByRelAddr uses relative
+				// scope level, which 0 is the current scope
+				// level and 1, 2, 3 and etc are relative
+				// scope levels away from current one
+				if(!(strcmp(getSymbolEntryByRelAddr(j, i + 2)->name, var_name)))
+				{ 
+					fprintf(stderr, "Variable Offset Value: %d\n\nScope Offset Level: %d\n\nVariable %s exists within %d Scope Level(s) Away from the Current Scope!\n\n", i + 2, j, var_name, j);
+		//			std::cout << "Variable Offset Value: ";
+		//			std::cout << i + 2 << std::endl;
+		///			std::cout << "Scope Offset Level: ";
+		//			std::cout << j << std::endl;
+//
+//					std::cout << "Variable " << var_name;
+//					std::cout << " exists within " << j;
+//					std::cout << " Scope Level(s) Away from";
+//					std::cout << " the Current Scope!";
+//					std::cout << std::endl << std::endl;
+				}
+			}
+		}
+	}
+}
 
 /* Helper function used to check if a variable has already been defined
  @param declar: This is a flag used to tell the function if you expect
@@ -134,19 +196,24 @@ mLine:
  @param var: This contains the variable name.
  */
 nodeType *chkInit(int declar, char* var,int type){
+    
+    fprintf(stderr, "Current Block Level: %d\n\n", getCurrentLevel());
+    //scopeCheck(var); 
     if (!declar)
 	{
         if ((getSymbolEntry(var)) == 0)
-		{
+	{
         	return id(var,type);
 		/* Check if the variable exists in the current scope */
         }
 		else if (getSymbolEntry(var)->blk_level != getCurrentLevel())
 		{
+			fprintf(stderr, "Variable Block Level: %d\n\n", getSymbolEntry(var)->blk_level);
 			return id(var,type);
 		}
 		else
 		{
+			fprintf(stderr, "Variable Block Level: %d\n\n", getSymbolEntry(var)->blk_level);
 			fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
 			}
 	}
