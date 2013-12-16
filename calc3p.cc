@@ -22,16 +22,16 @@ int currP;
 int ex(nodeType *p) {
     if (!p) return 0;
     switch(p->type) {
-    case typeCon:       //retVal.Integer = p->con.value; return 1;
-	addI(I_CONSTANT);
-	addI(p->con.value);
-	retval = 1;
-	return 0;
+		case typeCon:       //retVal.Integer = p->con.value; return 1;
+		addI(I_CONSTANT);
+		addI(p->con.value);
+		retval = 1;
+		return 0;
     case typeFloat:     //retVal.Real = p->fl.value; return 2;
-	addI(R_CONSTANT);
-	addF(p->fl.value);
-	retval = 2;
-	return 0;
+		addI(R_CONSTANT);
+		addF(p->fl.value);
+		retval = 2;
+		return 0;
     case typeId:	
 	if (getSymbolEntry(p->id.s)->type == typeCon){
         //retVal.Integer = getSymbolEntry(p->id.s)->val.i; return 1;
@@ -40,14 +40,16 @@ int ex(nodeType *p) {
 		addI(getSymbolEntry(p->id.s)->blk_level);
 		addI(getSymbolEntry(p->id.s)->offset);
 		addI(I_VALUE);
-		retval = 1;}
-	else{
+		retval = 1;
+		std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.i << std::endl;
+	}else{
         //retVal.Real = getSymbolEntry(p->id.s)->val.f; return 2;
 		addI(R_VARIABLE);
 		scopeCheck(p->id.s);
 		addI(getSymbolEntry(p->id.s)->blk_level);
 		addI(getSymbolEntry(p->id.s)->offset);
 		addI(R_VALUE);
+		std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.f << std::endl;
 		retval = 2;}
 	return 0;
     case typeOpr:

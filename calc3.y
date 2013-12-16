@@ -11,7 +11,7 @@
 
 /* prototypes */
 nodeType *opr(int oper, int nops, ...);
-nodeType *id(char* i,int type,declar);
+nodeType *id(char* i,int type,int declar);
 nodeType *con(int value);
 nodeType *fl(float value);
 nodeType *chkInit(int declar,char* name,int type);
