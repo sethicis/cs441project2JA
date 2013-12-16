@@ -18,14 +18,15 @@ void yyerror(char *);
 %%
 
 "//"						{BEGIN(CC_COMMENT);}
-<CC_COMMENT>\n			{lineno = lineno + 1;BEGIN(INITIAL);printf("Current line# %d\n",lineno);}
+<CC_COMMENT>\n			{lineno = lineno + 1;BEGIN(INITIAL);}
 "/*"						{BEGIN(C_COMMENT);}
-<C_COMMENT>\n				{lineno = lineno + 1;printf("Current line# %d\n",lineno);}
+<C_COMMENT>\n				{lineno = lineno + 1;}
 <C_COMMENT>"*/"				{BEGIN(INITIAL);}
 <C_COMMENT,CC_COMMENT>.	{ /* Do nothing */ }
 
-"float"        	return FL;
-"int"           return INT;
+"float"        	{multiAssignType = TYPE_INT; return FL;}
+"int"           {multiAssignType = TYPE_FLOAT; return INT;}
+
 ">="            return GE;
 "step"		return STEP;
 "to"		return TO;
@@ -47,6 +48,7 @@ void yyerror(char *);
 [-()<>=+*/;{},] {
     return *yytext;
 }
+"procedure "	{printf("Saw a procedure!\n"); return FUNC;}
 
 [a-zA-Z]+   {
                 yylval.sIndex = strdup(yytext);

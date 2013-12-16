@@ -8,5 +8,6 @@ int ARGs;
 int lineno;
 int prog_addr;
 int ADDR;
+int multiAssignType;
 
 #endif /* GLOBALS_H */

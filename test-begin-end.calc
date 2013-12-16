@@ -1,23 +1,6 @@
-int up = 1;
-int down = 0;
-print up; /* Output: 1 */
-print down; /* output: 0 */
+int global;
+global = 3;
+int dummy = 1;
 begin
-	begin
-	print 2;
-	print up;	/* Output: 1 */
-		/* begin
-		print down;	// Output: 0
-			begin
-				int up = 22;
-				int down = 33;
-				print up; // Output: 22
-				print down; // Output: 33
-			end
-		print up;	// Output: 1 
-		end 
-*/
-	end
+	print global;
 end
-print up; /* Output: 1 */
-print down;	/* Output: 0 */

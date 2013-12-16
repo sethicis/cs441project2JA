@@ -37,25 +37,25 @@ void end_prog(int varlen){
 	chkDef();
 	code->end_prog(varlen);
 }
-void begin_proc(int startPos){
+void begin_proc(){
 	chkDef();
 	/* Setup the relative jump call */
-	addI(I_JR);
+	addI(I_JMP);
 	addI(0);
 	proc_Addr_Pos->push(GetPos() - 1);
 	proc_Start_Pos->push(GetPos() + 1);
 	code->begin_proc();
 }
-void end_proc(int varCount){
+void end_proc(){
 	chkDef();
 	/* Supply the address of where the code started and get the number of vars in
 	 current stack */
 	code->end_proc(proc_Start_Pos->top(),getCurrentSymbolTableSize());
 	/* Set the relative jmp just after the process ends */
-	*I_refToPos(proc_Addr_Pos->top()) = GetPos() - proc_Addr_Pos->top() + 1;
+	*I_refToPos(proc_Addr_Pos->top()) = GetPos();
 	addI(I_CALL);
-	addI(getCurrentLevel());
-	addI(proc_Start_Pos->top()-1); /* Call the process block just made */
+	addI(getCurrentLevel()-1);
+	addI(proc_Start_Pos->top()); /* Call the process block just made */
 	proc_Start_Pos->pop(); /* Remove the block from addr */
 	proc_Addr_Pos->pop();  /* End of proc block */
 }

@@ -32,6 +32,7 @@ void yyerror(char *s);
 %token <fValue> FLOAT
 %token <sIndex> VARIABLE
 %token BEGIN_PROC END_PROC QUIT
+%token FUNC
 %token WHILE IF PRINT
 %token FOR
 %token DO REPEAT UNTIL
@@ -44,7 +45,7 @@ void yyerror(char *s);
 %token STEP TO
 %nonassoc UMINUS
 
-%type <nPtr> stmt expr stmt_list mLine forLine
+%type <nPtr> stmt expr stmt_list mLine forLine subExp
 
 %%
 
@@ -59,19 +60,20 @@ program:
         ;
 
 function:
-          function stmt         { ex($2); freeNode($2); }
+FUNC VARIABLE '(' ')' '{' stmt_list '}'	{ printf("Saw a function!\n");/* do stuff */ }
+		| function stmt         { ex($2); freeNode($2); }
         | /* NULL */
         ;
 
 stmt:
           ';'                            { $$ = opr(';', 2, NULL, NULL); }
         | expr ';'                       { $$ = $1; }
-        | FL mLine ';'                   { $$ = opr(',', 1, $2); }
-        | INT mLine ';'                  { $$ = opr(',', 1, $2); }
+        | INT mLine ';'                   { $$ = opr(',', 1, $2); }
+        | FL mLine ';'                  { $$ = opr(',', 1, $2); }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
         | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(1,$1,typeId), $3); }
-        | FL VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(0,$2,typeFloat), $4); }
-        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(0,$2,typeCon), $4);}
+        | FL VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(0,$2,TYPE_FLOAT), $4); }
+        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(0,$2,TYPE_INT), $4);}
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
@@ -79,7 +81,7 @@ stmt:
         | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
 	| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
-	| FOR '(' forLine STEP INTEGER TO INTEGER ')' stmt { $$ = opr(FOR, 4, $3, con($5), con($7), $9); }
+	| FOR '(' VARIABLE '=' subExp STEP INTEGER TO INTEGER ')' stmt	{ $$ = opr(FOR, 4, opr('=',2,chkInit(1, $3, typeId), $5) , opr('=',2,chkInit(1,$3,typeId),opr('+',2,chkInit(1,$3,typeId),con($7))) , opr(GE,2,chkInit(1,$3,typeId),con($9)) , $11); }
 /*
 		| WHILE '(' error ')' stmt        { yyerrok; yyerror("Error occured in: "); }
 | IF '(' error ')' stmt %prec IFX { yyerrok; yyerror("Error occured in: ");}
@@ -100,8 +102,8 @@ expr:
           INTEGER               { $$ = con($1); }
         | FLOAT                { $$ = fl($1); }
         | VARIABLE              { $$ = chkInit(1,$1,typeId); }
-        | INT VARIABLE          { $$ = chkInit(0,$2,typeCon); }
-        | FL VARIABLE           { $$ = chkInit(0,$2,typeFloat); }
+        | INT VARIABLE          { $$ = chkInit(0,$2,TYPE_INT); }
+        | FL VARIABLE           { $$ = chkInit(0,$2,TYPE_FLOAT); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
@@ -121,16 +123,33 @@ expr:
 
         ;
 mLine:
-         VARIABLE '=' expr ',' mLine    { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(0,$1,typeId), $3))); }
-        |VARIABLE '=' expr              { $$ = opr('=',2, chkInit(0,$1,typeId), $3); }
-        |VARIABLE ',' mLine             { $$ = opr(',', 2, $3,chkInit(0,$1,typeId)); }
-        |VARIABLE                       { $$ = chkInit(0,$1,0); }
+         VARIABLE '=' expr ',' mLine   { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(0,$1,multiAssignType), $3))); }
+        |VARIABLE '=' expr       { $$ = opr('=',2, chkInit(0,$1,multiAssignType), $3); }
+        |VARIABLE ',' mLine      { $$ = opr(',', 2, $3,chkInit(0,$1,multiAssignType)); }
+        |VARIABLE                { $$ = chkInit(0,$1,multiAssignType); }
         ;
 
 forLine:
-	VARIABLE '=' expr		{ $$ = opr('=', 2, chkInit(1, $1, typeId), $3); }
-	| /* NULL */
+	VARIABLE '=' subExp		{ $$ = opr('=', 2, chkInit(1, $1, typeId), $3); }
 	;
+
+subExp:
+		  INTEGER               { $$ = con($1); }
+		| FLOAT                { $$ = fl($1); }
+		| VARIABLE              { $$ = chkInit(1,$1,typeId); }
+		| '-' subExp %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
+		| subExp '+' subExp         { $$ = opr('+', 2, $1, $3); }
+		| subExp '-' subExp         { $$ = opr('-', 2, $1, $3); }
+		| subExp '*' subExp         { $$ = opr('*', 2, $1, $3); }
+		| subExp '/' subExp         { $$ = opr('/', 2, $1, $3); }
+		| subExp '<' subExp         { $$ = opr('<', 2, $1, $3); }
+		| subExp '>' subExp         { $$ = opr('>', 2, $1, $3); }
+		| subExp GE subExp          { $$ = opr(GE, 2, $1, $3); }
+		| subExp LE subExp          { $$ = opr(LE, 2, $1, $3); }
+		| subExp NE subExp          { $$ = opr(NE, 2, $1, $3); }
+		| subExp EQ subExp          { $$ = opr(EQ, 2, $1, $3); }
+		| '(' subExp ')'          { $$ = $2; }
+		;
 
 %%
 
@@ -199,7 +218,7 @@ void scopeCheck(const char *var_name){
  */
 nodeType *chkInit(int declar, char* var,int type){
     
-    fprintf(stderr, "Current Block Level: %d\n\n", getCurrentLevel());
+    //fprintf(stderr, "Current Block Level: %d\n\n", getCurrentLevel());
  //   scopeCheck(var); 
     if (!declar)
 	{
@@ -214,7 +233,7 @@ nodeType *chkInit(int declar, char* var,int type){
 		}
 		else
 		{
-			fprintf(stderr, "Variable Block Level: %d\n\n", getSymbolEntry(var)->blk_level);
+			//fprintf(stderr, "Variable Block Level: %d\n\n", getSymbolEntry(var)->blk_level);
 			fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
 			}
 	}
@@ -331,6 +350,8 @@ void freeNode(nodeType *p) {
         for (i = 0; i < p->opr.nops; i++)
             freeNode(p->opr.op[i]);
     }
+	if (!p) return;
+	//printf("Freeing var: %x\n",p);
     free (p);
 }
 
@@ -354,9 +375,14 @@ int main(int argc,char** argv) {
     ARGs = 3;
     lineno = 1;
     prog_addr = 1;
+	pushSymbolTable();
     begin_prog();           /* Generate code to begin a program */
-    pushSymbolTable();
+	//pushSymbolTable();
+	//begin_proc();
+    
     yyparse();
+	//end_proc();
+	//popSymbolTable();
     end_prog(getTotalSymbolTableSize()); /* Cue pstack for end of program */
     if (!writeOut(fileName,binary)) {
         fprintf(stderr,"ERROR @ Code Gen:: No code compiled. Problems detected.");

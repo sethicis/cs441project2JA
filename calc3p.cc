@@ -13,39 +13,41 @@
 
 int retval;
 WORD retVal;
-//int parseRet(nodeType*,nodeType*,int);
 bool operandType(nodeType* a,nodeType* b);
 void scopeCheck(const char *name);
 int* tmp; /* Temporary variable pointing to an instruction to change */
 int currP;
+int forCurrP;
+int forCondition;
 
 int ex(nodeType *p) {
     if (!p) return 0;
     switch(p->type) {
 		case typeCon:       //retVal.Integer = p->con.value; return 1;
-		addI(I_CONSTANT);
-		addI(p->con.value);
-		retval = 1;
-		return 0;
-    case typeFloat:     //retVal.Real = p->fl.value; return 2;
-		addI(R_CONSTANT);
-		addF(p->fl.value);
-		retval = 2;
-		return 0;
+			addI(I_CONSTANT);
+			addI(p->con.value);
+			retval = 1;
+			return 0;
+		case typeFloat:     //retVal.Real = p->fl.value; return 2;
+			addI(R_CONSTANT);
+			addF(p->fl.value);
+			retval = 2;
+			return 0;
     case typeId:	
-	if (getSymbolEntry(p->id.s)->type == typeCon){
+	if (getSymbolEntry(p->id.s)->type == TYPE_INT){
         //retVal.Integer = getSymbolEntry(p->id.s)->val.i; return 1;
 		addI(I_VARIABLE);
-		scopeCheck(p->id.s);
+		//scopeCheck(p->id.s);
 		addI(getSymbolEntry(p->id.s)->blk_level);
 		addI(getSymbolEntry(p->id.s)->offset);
 		addI(I_VALUE);
 		retval = 1;
+		std::cout << "For variable: " << p->id.s << " Blk_lvl: " << getSymbolEntry(p->id.s)->blk_level << " offset: " << getSymbolEntry(p->id.s)->offset << std::endl;
 		std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.i << std::endl;
 	}else{
         //retVal.Real = getSymbolEntry(p->id.s)->val.f; return 2;
 		addI(R_VARIABLE);
-		scopeCheck(p->id.s);
+		//scopeCheck(p->id.s);
 		addI(getSymbolEntry(p->id.s)->blk_level);
 		addI(getSymbolEntry(p->id.s)->offset);
 		addI(R_VALUE);
@@ -59,10 +61,10 @@ int ex(nodeType *p) {
 			//addI(I_JR);
 			//addI(0);
 			//currP = GetPos() - 1;
-			begin_proc(GetPos()+1);
+			begin_proc();
 			ex(p->opr.op[0]); //Does not support return values right now
-			std::cout << "Current symbol table size: " << getCurrentSymbolTableSize() << std::endl;
-			end_proc(getCurrentSymbolTableSize());
+			//std::cout << "Current symbol table size: " << getCurrentSymbolTableSize() << std::endl;
+			end_proc();
 			/* Set the relative jmp just after the process ends */
 			//*I_refToPos(currP) = GetPos() - currP + 1;
 			//addI(I_CALL);
@@ -71,19 +73,28 @@ int ex(nodeType *p) {
 			popSymbolTable();
 			return 0;
 		case FOR:
-			std::cout << "Beginning For Loop!" << std::endl;
-
-
-			std::cout << "Ending For Loop!" << std::endl;
-
-			return 0;
+			{
+				//std::cout << "Beginning For Loop!" << std::endl;
+				ex(p->opr.op[0]);			/* Variable x = something */
+				forCondition = GetPos();
+				ex(p->opr.op[2]);			/* Evaluate condition */
+				addI(I_JMP_IF_TRUE);		/* If condition is true */
+				addI(0);					/* Placeholer */
+				forCurrP = GetPos() - 1; /* Get placeholder addr */
+				ex(p->opr.op[3]); /* Statement to perform */
+				ex(p->opr.op[1]); /* increment value */
+				addI(I_JMP);			/* Loop it over again */
+				addI(forCondition);	/* Jump back and doe the statement again */
+				*I_refToPos(forCurrP) = GetPos();	/* Set the value for the placeholder */
+				//std::cout << "Ending For Loop!" << std::endl;
+				return 0;
+			}
 		case DO:
 			currP = GetPos();
 			ex(p->opr.op[0]); /* Statement */
 			ex(p->opr.op[1]); /* Condition */
 			addI(I_JMP_IF_TRUE);
 			addI(currP);		/* Address to jump to */
-			//do{ex(p->opr.op[0]);}while(ex(p->opr.op[1])); return 0;
 			return 0;
 		case REPEAT:
 			currP = GetPos();
@@ -92,7 +103,6 @@ int ex(nodeType *p) {
 			addI(I_JMP_IF_FALSE);
 			addI(currP);
 			return 0;
-			//do{ex(p->opr.op[0]);}while(!(ex(p->opr.op[1]))); return 0;
 		case WHILE: /* P-stack code for while loop, implemented in a do while form */
 			addI(I_CONSTANT);
 			addI(0);		/* Push constant false onto stack */
@@ -110,45 +120,34 @@ int ex(nodeType *p) {
 			//std::cout << "After I_refToPos()" << std::endl;
 			tmp = NULL;
 			return 0;
-			//while(ex(p->opr.op[0])) ex(p->opr.op[1]); return 0;
-       		case IF:
-			//if (ex(p->opr.op[0]))
+		case IF:
 			ex(p->opr.op[0]);
 			addI(I_JMP_IF_FALSE);
 			addI(0);			/* 1st Placeholder for address */
 			currP = GetPos(); /* Save placeholder position */
-			//tmp = code->at(currP-1);
-			//ex(p->opr.op[1]);
 			ex(p->opr.op[1]); /* True case code */
 			addI(I_JMP);
 			addI(0);		/* 2nd Placeholder for end of IF statement */
 			*I_refToPos(currP-1) = GetPos(); /* Set 1st placeholder to this addr */
 			tmp = I_refToPos(GetPos()-1); /* Save second placeholder for later */
-			/* else if case */
-			//if (p->opr.nops > 2)
-			addI(I_CONSTANT);
-			addI(p->opr.nops);
-			addI(I_CONSTANT);
-			addI(2);
-			addI(I_GREATER);
-			addI(I_JMP_IF_FALSE);
-			addI(0);			/* 3rd placeholder */
-			currP = GetPos();	/* Get the address of this position */
-			ex(p->opr.op[2]);
+			/* "ELSE" case */
+			if (p->opr.nops > 2)
+				ex(p->opr.op[2]);
 			/* END of IF sequence */
-			*I_refToPos(currP-1) = GetPos(); /* Set 3rd placeholder to end IF sequence */
-			*tmp = GetPos();				/* Set 2nd placeholder to end IF sequence */
+			*tmp = GetPos();	/* Set 2nd placeholder to end IF sequence */
 			return 0;
-       		 case ',':       
+		case ',':
 			if (p->opr.nops > 1) {	
                        		//ex(p->opr.op[1]); return parseRet(p->opr.op[0],NULL,',');
 				ex(p->opr.op[1]);
 				ex(p->opr.op[0]);
-				return 0;}
+				return 0;
+			}
 			else{
 				ex(p->opr.op[1]);
-				return 0;}
-           	 case PRINT:
+				return 0;
+			}
+		case PRINT:
 			ex(p->opr.op[0]);
 			if (retval == 1) {
 				addI(I_WRITE);
@@ -157,32 +156,36 @@ int ex(nodeType *p) {
 				addI(R_WRITE);
 				addI(1);}
 			return 0;
-        	case ';':
+		case ';':
 			ex(p->opr.op[0]);
 			ex(p->opr.op[1]);
-			return 0;
-        	case '=':
-                	if (getSymbolEntry(p->opr.op[0]->id.s)->type == typeCon) {
-                    		addI(I_VARIABLE);
-         	        	addI(getSymbolEntry(p->opr.op[0]->id.s)->blk_level);
-               			addI(getSymbolEntry(p->opr.op[0]->id.s)->offset);
-				ex(p->opr.op[1]);
-				if (retval == 1) {
+			return 0; /* Return from case */
+		case '=':
+			/* Check the variables type and perform the assignment as appropriate */
+			if (getSymbolEntry(p->opr.op[0]->id.s)->type == TYPE_INT)
+			{
+					addI(I_VARIABLE);
+					addI(getSymbolEntry(p->opr.op[0]->id.s)->blk_level);
+					addI(getSymbolEntry(p->opr.op[0]->id.s)->offset);
+				ex(p->opr.op[1]); /* Get the value to be assigned */
+				if (retval == 1) { /* If the value being assigned is int */
 					retVal.Integer = I_valAtPos(GetPos()-1);
+					printf("Assigning: %d to %s\n",retVal.Integer,p->opr.op[0]->id.s);
 					getSymbolEntry(p->opr.op[0]->id.s)->val.i = retVal.Integer;
-					addI(I_ASSIGN);
-					addI(1);}
-				else{
-					retVal.Real = F_valAtPos(GetPos()-1);
+					addI(I_ASSIGN); /* If the value to be assigned is an int */
+					addI(1);
+				}
+				else{ /* Else the value to be assigned is a Real */
+					retVal.Real = F_valAtPos(GetPos()-1); /* If the value is a Real */
 					getSymbolEntry(p->opr.op[0]->id.s)->val.i = retVal.Real;
-					addI(R_TO_I);
+					addI(R_TO_I); /* Convert real to int before assignment */
 					addI(I_ASSIGN);
 					addI(1);}
-                   		return 0;}
-			else{
-                    		addI(R_VARIABLE);
-                    		addI(getSymbolEntry(p->opr.op[0]->id.s)->blk_level);
-                    		addI(getSymbolEntry(p->opr.op[0]->id.s)->offset);
+					return 0;
+			}else{
+				addI(R_VARIABLE);
+				addI(getSymbolEntry(p->opr.op[0]->id.s)->blk_level);
+				addI(getSymbolEntry(p->opr.op[0]->id.s)->offset);
 				ex(p->opr.op[1]);
 				if (retval == 1) {
 					retVal.Integer = I_valAtPos(GetPos()-1);
@@ -195,63 +198,47 @@ int ex(nodeType *p) {
 					getSymbolEntry(p->opr.op[0]->id.s)->val.f = retVal.Real;
 					addI(R_ASSIGN);
 					addI(1);}
-				return 0;}
-        	case UMINUS:
+				return 0;
+			}
+		case UMINUS:
 			ex(p->opr.op[0]);
 			if (retval == 1) {
 				addI(I_MINUS);}
 			else{
 				addI(R_MINUS);}
 			return 0;
-        	case '+':
+		case '+':
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_ADD);}
 			else{
 				addI(I_ADD);}
 			return 0;
-        	case '-':
+		case '-':
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_SUBTRACT);}
 			else{
 				addI(I_SUBTRACT);}
 			return 0;
-        	case '*':
+		case '*':
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_MULTIPLY);}
 			else{
 				addI(I_MULTIPLY);}
 			return 0;
-        	case '/':
+		case '/':
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_DIVIDE);}
 			else{
 				addI(I_DIVIDE);}
 			//fl = false;
 			return 0;
-        	case '<':
-			//return parseRet(p->opr.op[0],p->opr.op[1],'<');
-			/*ex(p->opr.op[0]);
-			if (retval == 2) {
-				fl = true;
-			}
-			ex(p->opr.op[1]);
-			if (retval == 2) {
-				if (!fl) {
-					addI(I_SWAP);
-					addI(I_TO_R);
-					addI(I_SWAP);
-				}
-				fl = true;
-			}else if(fl){
-				addI(I_TO_R);
-				retval = 2;
-			}*/
+		case '<':
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_LESS);}
 			else{
 				addI(I_LESS);}
 			return 0;
-        	case '>':
+		case '>':
 			//return parseRet(p->opr.op[0],p->opr.op[1],'>');
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_GREATER);}
@@ -259,7 +246,7 @@ int ex(nodeType *p) {
 				addI(I_GREATER);
 			}
 			return 0;
-        	case GE:
+		case GE:
 			//return parseRet(p->opr.op[0],p->opr.op[1],GE);
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_GREATER);}
@@ -273,7 +260,7 @@ int ex(nodeType *p) {
 			/* Now stack has x == y (result), x > y (result) */
 			addI(I_OR); /* By definition, greater OR equal to */
 			return 0;
-       		 case LE:
+		case LE:
 			//return parseRet(p->opr.op[0],p->opr.op[1],LE);
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_LESS);}
@@ -289,7 +276,7 @@ int ex(nodeType *p) {
 			/* Now stack has x == y (result), x < y (result) */
 			addI(I_OR); /* By definition, less OR equal to. */
 			return 0;
-        	case NE:
+		case NE:
 			//return parseRet(p->opr.op[0],p->opr.op[1],NE);
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_EQUAL);}
@@ -297,7 +284,7 @@ int ex(nodeType *p) {
 				addI(I_EQUAL);}
 			addI(I_NOT);
 			return 0;
-        	case EQ:
+		case EQ:
 			//return parseRet(p->opr.op[0],p->opr.op[1],EQ);
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_EQUAL);}
@@ -312,7 +299,7 @@ int ex(nodeType *p) {
 
 // Check if Variable Exists Within Scope and Lower Scopes
 void scopeCheck(const char *var_name){
-/*	NOTE::: Commented out because code MAY be depricated...
+	//NOTE::: Commented out because code MAY be depricated...
 	int scope_level = getCurrentLevel();
 	int table_size;
 
@@ -362,7 +349,7 @@ void scopeCheck(const char *var_name){
 				}
 			}
 		}
-	}*/
+	}
 }
 	 
 /* Simple helper function that notifies the caller what type of
@@ -390,272 +377,4 @@ bool operandType(nodeType* a,nodeType* b){
 		retval = 2;
 	}
 	return fl;
-}
-
-/* This entire function may be deprecated now.
- Though it can't removed from the file until
- more thorough testing is completed.
- --JKB
- */
-/* TODO: Test all functionality to determine if this function needs to be kept */
-int parseRet(nodeType* left,nodeType* right,int op){
-    int val1I = 0,val2I = 0,t1 = 0,t2 = 0;
-    float val1F = 0,val2F = 0;
-    t1 = ex(left);
-    if (t1 == 1){
-        val1I = retVal.Integer;
-    }
-    else if(t1 == 2){
-        val1F = retVal.Real;
-    }else{
-        /* Null ret val */
-        val1I = 0;
-    }
-    /* If we're performing a two operand operation */
-    if (right != NULL) {
-        t2 = ex(left);
-        if (t2 == 1){
-            val2I = retVal.Integer;
-        }
-        else if(t2 == 2){
-            val2F = retVal.Real;
-        }else{
-            /* Null ret val */
-            val2I = 0;
-        }
-    }
-    switch (op) {
-        case ',':
-            if (t1 == 1) {
-                retVal.Integer = val1I;
-                return 1;
-            }else{
-                retVal.Real = val1F;
-                return 2;
-            }
-        case '=':
-            if (t1 == 1) {
-                retVal.Integer = val1I;
-                return 1;
-            }else{
-                retVal.Real = val1F;
-                return 2;
-            }
-        case UMINUS:
-            if (t1 == 1) {
-                retVal.Integer = -val1I;
-                return 1;
-            }else{
-                retVal.Real = -val1F;
-                return 2;
-            }
-        case '+':
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I + val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                retVal.Real = val1I + val2I + val1F + val2F;
-                return 2;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case '-':
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I - val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                retVal.Real = val1I - val2I + val1F - val2F;
-                return 2;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case '/':
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I / val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Real = val1F / val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Real = val1I / val2F;
-                }
-                else{
-                    retVal.Real = val1F / val2I;
-                }
-                return 2;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case '*':
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I * val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Real = val1F * val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Real = val1I * val2F;
-                }
-                else{
-                    retVal.Real = val1F * val2I;
-                }
-                return 2;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case '<':
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I < val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Integer = val1F < val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Integer = val1I < val2F;
-                }
-                else{
-                    retVal.Integer = val1F < val2I;
-                }
-                return 1;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case '>':
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I > val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Integer = val1F > val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Integer = val1I > val2F;
-                }
-                else{
-                    retVal.Integer = val1F > val2I;
-                }
-                return 1;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case GE:
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I >= val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Integer = val1F >= val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Integer = val1I >= val2F;
-                }
-                else{
-                    retVal.Integer = val1F >= val2I;
-                }
-                return 1;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case LE:
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I <= val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Integer = val1F <= val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Integer = val1I <= val2F;
-                }
-                else{
-                    retVal.Integer = val1F <= val2I;
-                }
-                return 1;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case EQ:
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I == val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Integer = val1F == val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Integer = val1I == val2F;
-                }
-                else{
-                    retVal.Integer = val1F == val2I;
-                }
-                return 1;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        case NE:
-            if (t1 == 1 && t2 == 1) {
-                retVal.Integer = val1I != val2I;
-                return 1;
-            }
-            else if((t1 == 2) || (t2 == 2)){
-                if (t1 == 2 && t2 == 2) {
-                    retVal.Integer = val1F != val2F;
-                }
-                else if(t1 != 2){
-                    retVal.Integer = val1I != val2F;
-                }
-                else{
-                    retVal.Integer = val1F != val2I;
-                }
-                return 1;
-            }
-            else{
-                /* Null case */
-                retVal.Integer = 0;
-                return 0;
-            }
-        default:
-            /* No operation specified */
-            return t1;
-            break;
-    }
 }
