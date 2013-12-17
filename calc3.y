@@ -11,10 +11,11 @@
 
 /* prototypes */
 nodeType *opr(int oper, int nops, ...);
-nodeType *id(char* i,int type, int declar);
+nodeType *id(char* i);
 nodeType *con(int value);
 nodeType *fl(float value);
-nodeType *chkInit(int declar,char* name,int type);
+//nodeType *chkInit(int declar,char* name,int type);
+nodeType *initId(char* name,int type);
 void freeNode(nodeType *p);
 int yylex(void);
 void yyerror(char *s);
@@ -39,14 +40,14 @@ nodeType *nest(void);
 %token DO REPEAT UNTIL
 %nonassoc IFX
 %nonassoc ELSE
-%right FL INT
+%right FL INT FLMULTI INTMULTI
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
 %left '*' '/'
 %token STEP TO
 %nonassoc UMINUS
 
-%type <nPtr> stmt expr stmt_list mLine forLine subExp
+%type <nPtr> stmt expr stmt_list mLine subExp
 
 %%
 
@@ -70,10 +71,10 @@ stmt:
           ';'                            { $$ = opr(';', 2, NULL, NULL); }
         | expr ';'                       { $$ = $1; }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
-        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1,typeId,1), $3); }
-        | FL VARIABLE '=' expr ';'       { $$ = opr('=',2,id($2,TYPE_FLOAT,0), $4); }
-        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, id($2,TYPE_INT,0), $4);}
-		| INT mLine ';'                   { $$ = opr(',', 1, $2); }
+        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1), $3); }
+        | FL VARIABLE '=' expr ';'       { $$ = opr('=',2,initId($2,TYPE_FLOAT), $4); }
+        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2,initId($2,TYPE_INT), $4);}
+| INT mLine ';'                   { $$ = opr(',', 1, $2); }
 		| FL mLine ';'                  { $$ = opr(',', 1, $2); }
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
@@ -82,13 +83,12 @@ stmt:
         | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
 		| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
-//| END_PROC			  { $$ = opr(END_PROC, 1, NULL); }
-	| FOR '(' VARIABLE '=' subExp STEP INTEGER TO INTEGER ')' stmt	{ $$ = opr(FOR, 4, opr('=',2,id($3, typeId, 1), $5) , opr('=',2,id($3,typeId,1),opr('+',2,id($3,typeId,1),con($7))) , opr(GE,2,id($3,typeId,1),con($9)) , $11); }
+	| FOR '(' VARIABLE '=' subExp STEP INTEGER TO subExp ')' stmt	{ $$ = opr(FOR, 4, opr('=',2,id($3), $5) , opr('=',2,id($3),opr('+',2,id($3),con($7))) , opr('>',2,id($3),$9) , $11); }
 /*
 		| WHILE '(' error ')' stmt        { yyerrok; yyerror("Error occured in: "); }
 | IF '(' error ')' stmt %prec IFX { yyerrok; yyerror("Error occured in: ");}
 		| IF '(' error ')' stmt ELSE stmt { yyerrok; yyerror("Error occured in: ");}
-| DO stmt WHILE '(' error ')' ';' { yyerrok; yyerror("Error occurred in: ");}
+| DO stmt WHILE '(' error ')' ';' { yyerrok; yyerror("Error occurred in: Do While Condition");}
 | REPEAT stmt UNTIL '(' error ')' ';' { yyerrok; yyerror("Error occurred in: ");}
 | '{' error '}'              { yyerrok; yyerror("Error occurred in: ");}
 |stmt error '\n'			{yyerrok; yyerror("Error seen");}
@@ -103,9 +103,9 @@ stmt_list:
 expr:
           INTEGER               { $$ = con($1); }
         | FLOAT                { $$ = fl($1); }
-        | VARIABLE              { $$ = id($1,typeId,1); }
-        | INT VARIABLE          { $$ = id($2,TYPE_INT,0); }
-        | FL VARIABLE           { $$ = id($2,TYPE_FLOAT,0); }
+        | VARIABLE              { $$ = id($1); }
+        | INT VARIABLE          { $$ = initId($2,TYPE_INT); }
+        | FL VARIABLE           { $$ = initId($2,TYPE_FLOAT); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
@@ -122,23 +122,18 @@ expr:
 | '(' error ')'			{ yyerrok; printf("Error seeen\n");}
 | expr error '\n'		{ yyerrok; printf("Error seen\n");}
  */
-
         ;
 mLine:
-         VARIABLE '=' expr ',' mLine   { $$ = opr(',', 2,$5, (opr('=', 2, id($1,multiAssignType,0), $3))); }
-        |VARIABLE '=' expr       { $$ = opr('=',2, id($1,multiAssignType,0), $3); }
-        |VARIABLE ',' mLine      { $$ = opr(',', 2, $3,id($1,multiAssignType,0)); }
-        |VARIABLE                { $$ = id($1,multiAssignType,0); }
+         VARIABLE '=' expr ',' mLine   { $$ = opr(',', 2,$5, (opr('=', 2, initId($1,multiAssignType), $3))); }
+        |VARIABLE '=' expr       { $$ = opr('=',2, initId($1,multiAssignType), $3); }
+        |VARIABLE ',' mLine      { $$ = opr(',', 2, $3,initId($1,multiAssignType)); }
+        |VARIABLE                { $$ = initId($1,multiAssignType); }
         ;
-
-forLine:
-	VARIABLE '=' subExp		{ $$ = opr('=', 2, id($1, typeId,1), $3); }
-	;
 
 subExp:
 		  INTEGER               { $$ = con($1); }
 		| FLOAT                { $$ = fl($1); }
-		| VARIABLE              { $$ = id($1,typeId,1); }
+		| VARIABLE              { $$ = id($1); }
 		| '-' subExp %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
 		| subExp '+' subExp         { $$ = opr('+', 2, $1, $3); }
 		| subExp '-' subExp         { $$ = opr('-', 2, $1, $3); }
@@ -213,44 +208,6 @@ void scopeCheck(const char *var_name){
 	}
 }
 
-/* Helper function used to check if a variable has already been defined
- @param declar: This is a flag used to tell the function if you expect
- the variable to have been declared or if you are declaring the variable.
- @param var: This contains the variable name.
- */
-nodeType *chkInit(int declar, char* var,int type){
-    
-    //fprintf(stderr, "Current Block Level: %d\n\n", getCurrentLevel());
- //   scopeCheck(var); 
-    if (!declar)
-	{
-        if ((getSymbolEntry(var)) == 0)
-		{
-        	return id(var,type,declar);
-		/* Check if the variable exists in the current scope */
-        }
-		else if (getSymbolEntry(var)->blk_level != getCurrentLevel())
-		{
-			return id(var,type,declar);
-		}
-		else
-		{
-			//fprintf(stderr, "Variable Block Level: %d\n\n", getSymbolEntry(var)->blk_level);
-			fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' already defined\n",lineno,var); exit(0);
-			}
-	}
-    else{
-        if ((getSymbolEntry(var)) != 0)
-	{
-            return id(var,type,declar);
-        }
-	else
-	{
-            fprintf(stderr, "ERROR @ LINE# %d:: Variable: '%s' not declared\n",lineno,var); exit(0);
-        }
-    }
-}
-
 nodeType *con(int value) {
     nodeType *p;
     size_t nodeSize;
@@ -281,47 +238,33 @@ nodeType *fl(float value) {
     p->fl.value = value;
     return p;
 }
-
-nodeType *id(char* name,int type,int declar) {
+nodeType *initId(char* name,int type){
+	nodeType *p;
+    size_t nodeSize;
+	
+    /* allocate node */
+    nodeSize = SIZEOF_NODETYPE + sizeof(idNodeType);
+    if ((p = malloc(nodeSize)) == NULL)
+	yyerror("out of memory");
+	p->type = initIdtype;
+    p->id.s = name;
+	//printf("IN id assigning type: %d",type);
+	p->symType = type;
+	p->lineNum = lineno;
+    return p;
+	
+}
+nodeType *id(char* name) {
     nodeType *p;
     size_t nodeSize;
-    symbol_entry *e;
 
     /* allocate node */
     nodeSize = SIZEOF_NODETYPE + sizeof(idNodeType);
     if ((p = malloc(nodeSize)) == NULL)
         yyerror("out of memory");
-	/*if (getSymbolEntry(name) == 0){
-			e = (symbol_entry*)malloc(sizeof(symbol_entry));
-			e->type = type;
-			e->name = name;
-			//printf("About to GetPos()\n");
-			e->addr = GetPos();
-			//printf("About to set getCurrentOffset()\n");
-			e->size = 1;
-			varCount++;
-			addSymbol(e,lineno);
-			//printf("Finished addSymbols\n");
-		}else if ((getSymbolEntry(name)->blk_level != getCurrentLevel()) && !declar)
-		{
-            e = (symbol_entry*)malloc(sizeof(symbol_entry));
-            e->type = type;
-            e->name = name;
-            //printf("About to GetPos()\n");
-            e->addr = GetPos();
-            //printf("About to set getCurrentOffset()\n");
-            e->size = 1;
-            varCount++;
-            addSymbol(e,lineno);
-            //printf("Finished addSymbols\n");
-	}*/
-
     /* copy information */
     p->type = typeId;
     p->id.s = name;
-	p->declar = declar;
-	p->symType = type;
-	p->lineNum = lineno;
     return p;
 }
 
@@ -367,28 +310,14 @@ void yyerror(char *s) {
 }
 
 int main(int argc,char** argv) {
-    /*if (argc > 1)
-    {
-        fileName = strdup((char *) argv[1]);
-    }
-    else
-    {
-        printf("%s \n", "File Error, No Parameters Passed!");
-    }*/
     binary = 1; /* Toggles the format of the p-stack code. binary vs numeric */
-    //varCount = 0;
-    strcpy(fileName,"test.apm");
+    strcpy(fileName,"calc3p_out.apm");
     ARGs = 3;
     lineno = 1;
     prog_addr = 1;
 	pushSymbolTable();
     begin_prog();           /* Generate code to begin a program */
-	//pushSymbolTable();
-	//begin_proc();
-    
     yyparse();
-	//end_proc();
-	//popSymbolTable();
     end_prog(getTotalSymbolTableSize()); /* Cue pstack for end of program */
     if (!writeOut(fileName,binary)) {
         fprintf(stderr,"ERROR @ Code Gen:: No code compiled. Problems detected.");

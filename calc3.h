@@ -1,7 +1,7 @@
 #ifndef CALC_3_H
 #define CALC_3_H
 
-typedef enum { typeCon, typeFloat, typeId, typeOpr } nodeEnum; /* added */
+typedef enum { typeCon, typeFloat, typeId, typeOpr, initIdtype} nodeEnum; /* added */
 
 /* constants */
 typedef struct {

@@ -1,9 +1,12 @@
-int global = 5;
-print global;
+int x = 60,z = 20;
+//x = 60;
+print x;
+print z;
 begin
-	//print global;
+	int p = 11;
+	print p;
 	begin
-		print global;
+		print p;
+		print x;
 	end
 end
-print global;

@@ -54,7 +54,8 @@ void end_proc(){
 	/* Set the relative jmp just after the process ends */
 	*I_refToPos(proc_Addr_Pos->top()) = GetPos() - proc_Addr_Pos->top() + 1;
 	addI(I_CALL);
-	addI(getCurrentLevel()-1);
+	//addI(getCurrentLevel()-1);
+	addI(0);
 	addI(proc_Start_Pos->top()- 1); /* Call the process block just made */
 	proc_Start_Pos->pop(); /* Remove the block from addr */
 	proc_Addr_Pos->pop();  /* End of proc block */

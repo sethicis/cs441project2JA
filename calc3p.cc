@@ -14,7 +14,7 @@
 int retval;
 WORD retVal;
 bool operandType(nodeType* a,nodeType* b);
-void scopeCheck(const char *name);
+int createSymbolEntry(nodeType*);
 int* tmp; /* Temporary variable pointing to an instruction to change */
 int currP;
 int forCurrP;
@@ -22,85 +22,63 @@ int forCondition;
 
 int ex(nodeType *p) {
     if (!p) return 0;
-	printf("Entering ex\n");
     switch(p->type) {
 		case typeCon:       //retVal.Integer = p->con.value; return 1;
-			printf("Entering typeCon\n");
 			addI(I_CONSTANT);
 			addI(p->con.value);
 			retval = 1;
 			return 0;
 		case typeFloat:     //retVal.Real = p->fl.value; return 2;
-			printf("Entering typeFloat\n");
 			addI(R_CONSTANT);
 			addF(p->fl.value);
 			retval = 2;
 			return 0;
+		/* Case for when a variable already exists */
 		case typeId:
-		printf("Entering typeId\n");
-		{
-			symbol_entry* e;
-			e = (symbol_entry*)malloc(sizeof(symbol_entry));
-			if (getSymbolEntry(p->id.s) == 0){
-				e = (symbol_entry*)malloc(sizeof(symbol_entry));
-				e->type = p->symType;
-				e->name = p->id.s;
-				e->addr = GetPos();
-				e->size = 1;
-				//varCount++;
-				addSymbol(e,p->lineNum);
-			}else if ((getSymbolEntry(p->id.s)->blk_level != getCurrentLevel()) && !p->declar)
-			{
-				e = (symbol_entry*)malloc(sizeof(symbol_entry));
-				e->type = p->symType;
-				e->name = p->id.s;
-				e->addr = GetPos();
-				e->size = 1;
-				//varCount++;
-				addSymbol(e,p->lineNum);
+			/* Make sure we didn't miss something */
+			if (!getSymbolEntry(p->id.s)) {
+				fprintf(stderr,"Variable: %s does not exist in symbol table\n",p->id.s);
+				exit(1);
 			}
-		}
-	if (getSymbolEntry(p->id.s)->type == TYPE_INT){
-		addI(I_VARIABLE);
-		addI(getCurrentLevel()-getSymbolEntry(p->id.s)->blk_level);
-		addI(getSymbolEntry(p->id.s)->offset);
-		addI(I_VALUE);
-		retval = 1;
-		//std::cout << "For variable: " << p->id.s << " Blk_lvl: " << getSymbolEntry(p->id.s)->blk_level << " offset: " << getSymbolEntry(p->id.s)->offset << std::endl;
-		//std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.i << std::endl;
-	}else{
-        //retVal.Real = getSymbolEntry(p->id.s)->val.f; return 2;
-		addI(R_VARIABLE);
-		//scopeCheck(p->id.s);
-		addI(getSymbolEntry(p->id.s)->blk_level);
-		addI(getSymbolEntry(p->id.s)->offset);
-		addI(R_VALUE);
-		//std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.f << std::endl;
-		retval = 2;}
-	return 0;
+			if (getSymbolEntry(p->id.s)->type == TYPE_INT){
+				addI(I_VARIABLE);
+				addI(getCurrentLevel() - getSymbolEntry(p->id.s)->blk_level);
+				addI(getSymbolEntry(p->id.s)->offset);
+				retval = 1;
+			}else{
+				addI(R_VARIABLE);
+				addI(getCurrentLevel() - getSymbolEntry(p->id.s)->blk_level);
+				addI(getSymbolEntry(p->id.s)->offset);
+				retval = 2;}
+			return 0;
+		/* Case for initalizing a new variable */
+		case initIdtype:
+			/* Check for errors */
+			if(createSymbolEntry(p))
+				{fprintf(stderr,"Variable already defined\n");
+					exit(1);}
+			if (getSymbolEntry(p->id.s)->type == TYPE_INT){
+				addI(I_VARIABLE);
+				addI(getCurrentLevel()-getSymbolEntry(p->id.s)->blk_level);
+				addI(getSymbolEntry(p->id.s)->offset);
+				retval = 1;
+			}else{
+				addI(R_VARIABLE);
+				addI(getCurrentLevel()-getSymbolEntry(p->id.s)->blk_level);
+				addI(getSymbolEntry(p->id.s)->offset);
+				retval = 2;}
+			return 0;
     case typeOpr:
-		printf("Entering ex opr\n");
         switch(p->opr.oper) {
 			case BEGIN_PROC:
-				//printSymbolTable();
 				pushSymbolTable();
-				//addI(I_JR);
-				//addI(0);
-				//currP = GetPos() - 1;
 				begin_proc();
 				ex(p->opr.op[0]); //Does not support return values right now
-				//std::cout << "Current symbol table size: " << getCurrentSymbolTableSize() << std::endl;
 				end_proc();
-				/* Set the relative jmp just after the process ends */
-				//*I_refToPos(currP) = GetPos() - currP + 1;
-				//addI(I_CALL);
-				//addI(getCurrentLevel());
-				//addI(currP+1); /* Call the process block just made */
-				popSymbolTable(); printf("Removing Symbol Table\n");
+				popSymbolTable(); //printf("Removing Symbol Table\n");
 				return 0;
 			case FOR:
 				{
-					//std::cout << "Beginning For Loop!" << std::endl;
 					ex(p->opr.op[0]);			/* Variable x = something */
 					forCondition = GetPos();
 					ex(p->opr.op[2]);			/* Evaluate condition */
@@ -112,7 +90,6 @@ int ex(nodeType *p) {
 					addI(I_JMP);			/* Loop it over again */
 					addI(forCondition);	/* Jump back and doe the statement again */
 					*I_refToPos(forCurrP) = GetPos();	/* Set the value for the placeholder */
-					//std::cout << "Ending For Loop!" << std::endl;
 					return 0;
 				}
 		case DO:
@@ -130,21 +107,15 @@ int ex(nodeType *p) {
 			addI(currP);
 			return 0;
 		case WHILE: /* P-stack code for while loop, implemented in a do while form */
-			addI(I_CONSTANT);
-			addI(0);		/* Push constant false onto stack */
-			addI(I_JMP_IF_FALSE);
+			addI(I_JMP);
 			addI(0);		/* Put placeholder on stack */
 			currP = GetPos();/* Save the current position right before the statement */
 			ex(p->opr.op[1]); /* Statement code */
-			tmp = I_refToPos(currP - 1); /* Get a reference to the placeholder */
-			//std::cout << "About to I_refToPos()" << std::endl;
-			*tmp = GetPos(); /* Set the placeholder to the condition code */
+			*I_refToPos(currP-1) = GetPos(); /* Set the placeholder to the condition code */
 			
 			ex(p->opr.op[0]); /* Condition code */
 			addI(I_JMP_IF_TRUE); /* If true run the statement code until false */
 			addI(currP);		/* Add address of statement code */
-			//std::cout << "After I_refToPos()" << std::endl;
-			tmp = NULL;
 			return 0;
 		case IF:
 			ex(p->opr.op[0]);
@@ -163,22 +134,30 @@ int ex(nodeType *p) {
 			*tmp = GetPos();	/* Set 2nd placeholder to end IF sequence */
 			return 0;
 		case ',':
-			if (p->opr.nops > 1) {	
-                       		//ex(p->opr.op[1]); return parseRet(p->opr.op[0],NULL,',');
+			if (p->opr.nops > 1) {
 				ex(p->opr.op[1]);
 				ex(p->opr.op[0]);
 				return 0;
 			}
 			else{
-				ex(p->opr.op[1]);
+				ex(p->opr.op[0]);
 				return 0;
 			}
 		case PRINT:
 			ex(p->opr.op[0]);
+				
 			if (retval == 1) {
+				/* If the operand to be printed is a variable. Get its value */
+				if ((p->opr.op[0]->type == typeId) || (p->opr.op[0]->type == initIdtype)) {
+					addI(I_VALUE);
+				}
 				addI(I_WRITE);
 				addI(1);}
 			else{
+				/* If the value being printed is a variable get its value */
+				if ((p->opr.op[0]->type == typeId) || (p->opr.op[0]->type == initIdtype)) {
+					addI(R_VALUE);
+				}
 				addI(R_WRITE);
 				addI(1);}
 			return 0;
@@ -188,75 +167,72 @@ int ex(nodeType *p) {
 			return 0; /* Return from case */
 		case '=':
 			/* Check the variables type and perform the assignment as appropriate */
-			/* If not Initalized do it! */
-			if (getSymbolEntry(p->opr.op[0]->id.s) == 0) {
-				symbol_entry* e;
-				e = (symbol_entry*)malloc(sizeof(symbol_entry));
-				if (getSymbolEntry(p->opr.op[0]->id.s) == 0){
-					e = (symbol_entry*)malloc(sizeof(symbol_entry));
-					e->type = p->opr.op[0]->symType;
-					e->name = p->opr.op[0]->id.s;
-					e->addr = GetPos();
-					e->size = 1;
-					//varCount++;
-					addSymbol(e,p->opr.op[0]->lineNum);
-			}else if ((getSymbolEntry(p->opr.op[0]->id.s)->blk_level != getCurrentLevel()) && !p->opr.op[0]->declar)
-				{
-					e = (symbol_entry*)malloc(sizeof(symbol_entry));
-					e->type = p->opr.op[0]->symType;
-					e->name = p->opr.op[0]->id.s;
-					e->addr = GetPos();
-					e->size = 1;
-					//varCount++;
-					addSymbol(e,p->opr.op[0]->lineNum);
-				}
-			}
-			if (getSymbolEntry(p->opr.op[0]->id.s)->type == TYPE_INT)
+				ex(p->opr.op[0]);
+				/* Type checking used to insure that reals and integers are mixed
+				 up.  In the case of assignments the datatype of the variable
+				 takes precedence and the value being assigned to the variable
+				 is cast to its appropriate datatype */
+			if (retval == TYPE_INT)
 			{
-					addI(I_VARIABLE);
-					addI(getSymbolEntry(p->opr.op[0]->id.s)->blk_level);
-					addI(getSymbolEntry(p->opr.op[0]->id.s)->offset);
 				ex(p->opr.op[1]); /* Get the value to be assigned */
-				if (retval == 1) { /* If the value being assigned is int */
+				if (retval == TYPE_INT) { /* If the value being assigned is int */
+					if ((p->opr.op[1]->type == typeId) || (p->opr.op[1]->type == initIdtype))
+							addI(I_VALUE);
 					retVal.Integer = I_valAtPos(GetPos()-1);
-					printf("Assigning: %d to %s\n",retVal.Integer,p->opr.op[0]->id.s);
+					//printf("Assigning: %d to %s\n",retVal.Integer,p->opr.op[0]->id.s);
 					getSymbolEntry(p->opr.op[0]->id.s)->val.i = retVal.Integer;
 					addI(I_ASSIGN); /* If the value to be assigned is an int */
 					addI(1);
 				}
 				else{ /* Else the value to be assigned is a Real */
+					if ((p->opr.op[1]->type == typeId) || (p->opr.op[1]->type == initIdtype))
+						addI(R_VALUE);
 					retVal.Real = F_valAtPos(GetPos()-1); /* If the value is a Real */
 					getSymbolEntry(p->opr.op[0]->id.s)->val.i = retVal.Real;
 					addI(R_TO_I); /* Convert real to int before assignment */
 					addI(I_ASSIGN);
 					addI(1);}
 					return 0;
-			}else{
-				addI(R_VARIABLE);
-				addI(getSymbolEntry(p->opr.op[0]->id.s)->blk_level);
-				addI(getSymbolEntry(p->opr.op[0]->id.s)->offset);
+			}else{ /* Case variable is a Real */
 				ex(p->opr.op[1]);
-				if (retval == 1) {
+				if (retval == TYPE_INT) {
+					if ((p->opr.op[1]->type == typeId) || (p->opr.op[1]->type == initIdtype))
+						addI(I_VALUE);
 					retVal.Integer = I_valAtPos(GetPos()-1);
 					getSymbolEntry(p->opr.op[0]->id.s)->val.f = retVal.Integer;
 					addI(I_TO_R);
 					addI(R_ASSIGN);
 					addI(1);}
-				else{
+				else{ /* Case Real */
+					if ((p->opr.op[1]->type == typeId) || (p->opr.op[1]->type == initIdtype))
+						addI(R_VALUE);
 					retVal.Real = F_valAtPos(GetPos()-1);
 					getSymbolEntry(p->opr.op[0]->id.s)->val.f = retVal.Real;
 					addI(R_ASSIGN);
 					addI(1);}
 				return 0;
 			}
+		/* All operations in this switch case are filtered through a type checking
+		 algorithm that determines what type to cast everything.  Floats
+		 take the highest priority, thus any numeric operations involving Reals
+		 will be cast into operations involving only reals.
+		 The only exception to this case is when the user is making assignments
+		 to a variable.  See assignment section for more details */
 		case UMINUS:
 			ex(p->opr.op[0]);
-			if (retval == 1) {
+			/* retval is used as a flag for the return type.
+			 This is a kind of rudementary type checking tool */
+			if (retval == TYPE_INT) {
+				if ((p->opr.op[0]->type == typeId) || (p->opr.op[0]->type == initIdtype))
+					addI(I_VALUE);
 				addI(I_MINUS);}
 			else{
+				if ((p->opr.op[0]->type == typeId) || (p->opr.op[0]->type == initIdtype))
+					addI(R_VALUE);
 				addI(R_MINUS);}
 			return 0;
 		case '+':
+			/* Depending on the type of data on the stack use the appropriate instruction */
 			if (operandType(p->opr.op[0],p->opr.op[1])) {
 				addI(R_ADD);}
 			else{
@@ -344,62 +320,6 @@ int ex(nodeType *p) {
     }
     return 0;
 }
-
-
-// Check if Variable Exists Within Scope and Lower Scopes
-void scopeCheck(const char *var_name){
-	//NOTE::: Commented out because code MAY be depricated...
-	int scope_level = getCurrentLevel();
-	int table_size;
-
-	std::cout << "Variable Reference Called(I think...)! Checking Scope Level for Variable!" << std::endl << std::endl;
-
-	// If variable name is no where in the entire stack
-	if(!(getSymbolEntry(var_name)))
-	{
-		std::cout << "Variable hasn't been declared or doesn't exist!" <<
-		std::endl << std::endl;
-	}
-	else // Variable name exists in entire stack somewhere
-	{
-		// Do a Top-Bottom Scope Level Depth Check
-		for(int j = scope_level; j >= 0; j--)
-		{
-			// Obtain Current Activation Record Size
-			table_size = getSymbolTableSize(j);
-
-			// Check all variables within record
-			for(int i = table_size; i > 0; i--)
-			{
-//				std::cout << "Current Symbol Table Size: ";
-//				std::cout << i << std::endl;
-//				std::cout << "Current Scope Level: ";
-//				std::cout << j << std::endl;
-				//std::cout << getSymbolEntryByRelAddr(j, i + 2)->name << " -> Variable Name" << std::endl;				
-
-				// If Variable Names Match
-
-				// Note: getSymbolEntryByRelAddr uses relative
-				// scope level, which 0 is the current scope
-				// level and 1, 2, 3 and etc are relative
-				// scope levels away from current one
-				if(!(strcmp(getSymbolEntryByRelAddr(j, i + 2)->name, var_name)))
-				{ 
-					std::cout << "Variable Offset Value: ";
-					std::cout << i + 2 << std::endl;
-					std::cout << "Scope Offset Level: ";
-					std::cout << j << std::endl;
-
-					std::cout << "Variable " << var_name;
-					std::cout << " exists within " << j;
-					std::cout << " Scope Level(s) Away from";
-					std::cout << " the Current Scope!";
-					std::cout << std::endl << std::endl;
-				}
-			}
-		}
-	}
-}
 	 
 /* Simple helper function that notifies the caller what type of
  instruction to use. Real or Integer.
@@ -408,22 +328,61 @@ void scopeCheck(const char *var_name){
  --JKB
  */
 bool operandType(nodeType* a,nodeType* b){
+	/* check whether or not either of the operands are a variable */
+	bool var1 = ((a->type == typeId) || (a->type == initIdtype));
+	bool var2 = ((b->type == typeId) || (b->type == initIdtype));
 	bool fl = false;
 	ex(a);
-	if (retval == 2) {
+	if (retval == TYPE_FLOAT) { /* variable was a Real */
 		fl = true;
+		if (var1)
+			addI(R_VALUE); /* dereference value of variable real */
+	}else{
+		if (var1)
+			addI(I_VALUE); /* Output the integer value of the variable */
 	}
 	ex(b);
-	if (retval == 2) {
-		if (!fl) {
-			addI(I_SWAP);
-			addI(I_TO_R);
-			addI(I_SWAP);
+	if (retval == TYPE_FLOAT) { /* second operand was a Real as well */
+		if (var2)
+			addI(R_VALUE); /* dereference value of variable real */
+		if (!fl) {	/* If the first operand was not a real */
+			addI(I_SWAP); /* Swap the new values on the stack */
+			addI(I_TO_R); /* Change integer to Real */
+			addI(I_SWAP); /* Swap back */
 		}
 		fl = true;
 	}else if(fl){
+		if (var2)
+			addI(I_VALUE); /* dereference value of variable int */
 		addI(I_TO_R);
 		retval = 2;
+	}else
+		if (var2)
+			addI(I_VALUE); /* dereference value of variable int */
+	return fl; /* Return operandType */
+}
+
+int	createSymbolEntry(nodeType* p){
+	symbol_entry* e = (symbol_entry*)malloc(sizeof(symbol_entry));
+	if (getSymbolEntry(p->id.s) == 0){
+		//printf("Assigning type: %d to %s\n",p->symType,p->id.s);
+		e->type = p->symType;
+		e->name = p->id.s;
+		e->addr = GetPos();
+		e->size = 1;
+		//varCount++;
+		addSymbol(e,p->lineNum);
+		return 0;
+	}else if ((getSymbolEntry(p->id.s)->blk_level != getCurrentLevel()))
+	{
+		//printf("Assigning type: %d to %s in a new scope\n",p->symType,p->id.s);
+		e->type = p->symType;
+		e->name = p->id.s;
+		e->addr = GetPos();
+		e->size = 1;
+		//varCount++;
+		addSymbol(e,p->lineNum);
+		return 0;
 	}
-	return fl;
+	return 1;
 }

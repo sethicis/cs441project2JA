@@ -187,7 +187,6 @@ void PstackCode::begin_proc()
 
 void PstackCode::end_proc(int patch_loc, int varsize)
 {
-  printf("patch_loc: %d varsize: %d\n", patch_loc, varsize);
   at(patch_loc) = varsize;
   add(I_ENDPROC);
 }

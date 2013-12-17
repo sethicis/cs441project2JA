@@ -24,8 +24,8 @@ void yyerror(char *);
 <C_COMMENT>"*/"				{BEGIN(INITIAL);}
 <C_COMMENT,CC_COMMENT>.	{ /* Do nothing */ }
 
-"float"        	{multiAssignType = TYPE_INT; return FL;}
-"int"           {multiAssignType = TYPE_FLOAT; return INT;}
+"float"        	{multiAssignType = TYPE_FLOAT; return FL;}
+"int"           {multiAssignType = TYPE_INT; return INT;}
 
 ">="            return GE;
 "step"		return STEP;
@@ -50,7 +50,7 @@ void yyerror(char *);
 }
 "procedure "	{printf("Saw a procedure!\n"); return FUNC;}
 
-[a-zA-Z]+   {
+[_a-zA-Z][_a-zA-Z0-9]*   {
                 yylval.sIndex = strdup(yytext);
                 return VARIABLE;
             }
@@ -65,7 +65,7 @@ void yyerror(char *);
               	return INTEGER;
               }
 
-\n          {lineno = lineno + 1;printf("Current line# %d\n",lineno);}
+\n          {lineno = lineno + 1;}
 
 [ \t]+        ;       /* ignore whitespace */
 
