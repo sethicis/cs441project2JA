@@ -1,6 +1,9 @@
-int global;
-global = 3;
-int dummy = 1;
+int global = 5;
+print global;
 begin
-	print global;
+	//print global;
+	begin
+		print global;
+	end
 end
+print global;

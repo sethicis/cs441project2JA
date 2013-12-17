@@ -18,6 +18,7 @@ nodeType *chkInit(int declar,char* name,int type);
 void freeNode(nodeType *p);
 int yylex(void);
 void yyerror(char *s);
+nodeType *nest(void);
 
 %}
 
@@ -68,20 +69,21 @@ FUNC VARIABLE '(' ')' '{' stmt_list '}'	{ printf("Saw a function!\n");/* do stuf
 stmt:
           ';'                            { $$ = opr(';', 2, NULL, NULL); }
         | expr ';'                       { $$ = $1; }
-        | INT mLine ';'                   { $$ = opr(',', 1, $2); }
-        | FL mLine ';'                  { $$ = opr(',', 1, $2); }
         | PRINT expr ';'                 { $$ = opr(PRINT, 1, $2); }
-        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, chkInit(1,$1,typeId), $3); }
-        | FL VARIABLE '=' expr ';'       { $$ = opr('=', 2, chkInit(0,$2,TYPE_FLOAT), $4); }
-        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, chkInit(0,$2,TYPE_INT), $4);}
+        | VARIABLE '=' expr ';'          { $$ = opr('=', 2, id($1,typeId,1), $3); }
+        | FL VARIABLE '=' expr ';'       { $$ = opr('=',2,id($2,TYPE_FLOAT,0), $4); }
+        | INT VARIABLE '=' expr ';'      { $$ = opr('=', 2, id($2,TYPE_INT,0), $4);}
+		| INT mLine ';'                   { $$ = opr(',', 1, $2); }
+		| FL mLine ';'                  { $$ = opr(',', 1, $2); }
         | WHILE '(' expr ')' stmt        { $$ = opr(WHILE, 2, $3, $5); }
         | IF '(' expr ')' stmt %prec IFX { $$ = opr(IF, 2, $3, $5); }
         | IF '(' expr ')' stmt ELSE stmt { $$ = opr(IF, 3, $3, $5, $7); }
         | DO stmt WHILE '(' expr ')' ';' { $$ = opr(DO, 2, $2, $5); }
         | REPEAT stmt UNTIL '(' expr ')' ';' { $$ = opr(REPEAT, 2, $2, $5); }
         | '{' stmt_list '}'              { $$ = $2; }
-	| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
-	| FOR '(' VARIABLE '=' subExp STEP INTEGER TO INTEGER ')' stmt	{ $$ = opr(FOR, 4, opr('=',2,chkInit(1, $3, typeId), $5) , opr('=',2,chkInit(1,$3,typeId),opr('+',2,chkInit(1,$3,typeId),con($7))) , opr(GE,2,chkInit(1,$3,typeId),con($9)) , $11); }
+		| BEGIN_PROC stmt_list END_PROC {$$ = opr(BEGIN_PROC,1, $2); }
+//| END_PROC			  { $$ = opr(END_PROC, 1, NULL); }
+	| FOR '(' VARIABLE '=' subExp STEP INTEGER TO INTEGER ')' stmt	{ $$ = opr(FOR, 4, opr('=',2,id($3, typeId, 1), $5) , opr('=',2,id($3,typeId,1),opr('+',2,id($3,typeId,1),con($7))) , opr(GE,2,id($3,typeId,1),con($9)) , $11); }
 /*
 		| WHILE '(' error ')' stmt        { yyerrok; yyerror("Error occured in: "); }
 | IF '(' error ')' stmt %prec IFX { yyerrok; yyerror("Error occured in: ");}
@@ -101,9 +103,9 @@ stmt_list:
 expr:
           INTEGER               { $$ = con($1); }
         | FLOAT                { $$ = fl($1); }
-        | VARIABLE              { $$ = chkInit(1,$1,typeId); }
-        | INT VARIABLE          { $$ = chkInit(0,$2,TYPE_INT); }
-        | FL VARIABLE           { $$ = chkInit(0,$2,TYPE_FLOAT); }
+        | VARIABLE              { $$ = id($1,typeId,1); }
+        | INT VARIABLE          { $$ = id($2,TYPE_INT,0); }
+        | FL VARIABLE           { $$ = id($2,TYPE_FLOAT,0); }
         | '-' expr %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
         | expr '+' expr         { $$ = opr('+', 2, $1, $3); }
         | expr '-' expr         { $$ = opr('-', 2, $1, $3); }
@@ -123,20 +125,20 @@ expr:
 
         ;
 mLine:
-         VARIABLE '=' expr ',' mLine   { $$ = opr(',', 2,$5, (opr('=', 2, chkInit(0,$1,multiAssignType), $3))); }
-        |VARIABLE '=' expr       { $$ = opr('=',2, chkInit(0,$1,multiAssignType), $3); }
-        |VARIABLE ',' mLine      { $$ = opr(',', 2, $3,chkInit(0,$1,multiAssignType)); }
-        |VARIABLE                { $$ = chkInit(0,$1,multiAssignType); }
+         VARIABLE '=' expr ',' mLine   { $$ = opr(',', 2,$5, (opr('=', 2, id($1,multiAssignType,0), $3))); }
+        |VARIABLE '=' expr       { $$ = opr('=',2, id($1,multiAssignType,0), $3); }
+        |VARIABLE ',' mLine      { $$ = opr(',', 2, $3,id($1,multiAssignType,0)); }
+        |VARIABLE                { $$ = id($1,multiAssignType,0); }
         ;
 
 forLine:
-	VARIABLE '=' subExp		{ $$ = opr('=', 2, chkInit(1, $1, typeId), $3); }
+	VARIABLE '=' subExp		{ $$ = opr('=', 2, id($1, typeId,1), $3); }
 	;
 
 subExp:
 		  INTEGER               { $$ = con($1); }
 		| FLOAT                { $$ = fl($1); }
-		| VARIABLE              { $$ = chkInit(1,$1,typeId); }
+		| VARIABLE              { $$ = id($1,typeId,1); }
 		| '-' subExp %prec UMINUS { $$ = opr(UMINUS, 1, $2); }
 		| subExp '+' subExp         { $$ = opr('+', 2, $1, $3); }
 		| subExp '-' subExp         { $$ = opr('-', 2, $1, $3); }
@@ -289,14 +291,14 @@ nodeType *id(char* name,int type,int declar) {
     nodeSize = SIZEOF_NODETYPE + sizeof(idNodeType);
     if ((p = malloc(nodeSize)) == NULL)
         yyerror("out of memory");
-		if (getSymbolEntry(name) == 0){
+	/*if (getSymbolEntry(name) == 0){
 			e = (symbol_entry*)malloc(sizeof(symbol_entry));
 			e->type = type;
 			e->name = name;
 			//printf("About to GetPos()\n");
-			e->addr = GetPos(); /* Checks will needed to be added for block levels */
+			e->addr = GetPos();
 			//printf("About to set getCurrentOffset()\n");
-			e->size = 1; /* For now size is staticly set to 1 AK-KB */
+			e->size = 1;
 			varCount++;
 			addSymbol(e,lineno);
 			//printf("Finished addSymbols\n");
@@ -306,16 +308,20 @@ nodeType *id(char* name,int type,int declar) {
             e->type = type;
             e->name = name;
             //printf("About to GetPos()\n");
-            e->addr = GetPos(); /* Checks will needed to be added for block levels */
+            e->addr = GetPos();
             //printf("About to set getCurrentOffset()\n");
-            e->size = 1; /* For now size is staticly set to 1 AK-KB */
+            e->size = 1;
             varCount++;
             addSymbol(e,lineno);
             //printf("Finished addSymbols\n");
-        }
+	}*/
+
     /* copy information */
     p->type = typeId;
     p->id.s = name;
+	p->declar = declar;
+	p->symType = type;
+	p->lineNum = lineno;
     return p;
 }
 
@@ -370,7 +376,7 @@ int main(int argc,char** argv) {
         printf("%s \n", "File Error, No Parameters Passed!");
     }*/
     binary = 1; /* Toggles the format of the p-stack code. binary vs numeric */
-    varCount = 0;
+    //varCount = 0;
     strcpy(fileName,"test.apm");
     ARGs = 3;
     lineno = 1;

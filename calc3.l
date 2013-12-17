@@ -41,8 +41,8 @@ void yyerror(char *);
 "do"        	return DO;
 "repeat"    	return REPEAT;
 "until"    	return UNTIL;
-"begin"		{pushSymbolTable(); return BEGIN_PROC;}
-"end"   	return END_PROC;
+"begin"		{/*pushSymbolTable();*/ return BEGIN_PROC;}
+"end"   	{ return END_PROC;}
 "quit"      	return QUIT;
 
 [-()<>=+*/;{},] {

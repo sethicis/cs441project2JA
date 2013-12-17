@@ -22,28 +22,52 @@ int forCondition;
 
 int ex(nodeType *p) {
     if (!p) return 0;
+	printf("Entering ex\n");
     switch(p->type) {
 		case typeCon:       //retVal.Integer = p->con.value; return 1;
+			printf("Entering typeCon\n");
 			addI(I_CONSTANT);
 			addI(p->con.value);
 			retval = 1;
 			return 0;
 		case typeFloat:     //retVal.Real = p->fl.value; return 2;
+			printf("Entering typeFloat\n");
 			addI(R_CONSTANT);
 			addF(p->fl.value);
 			retval = 2;
 			return 0;
-    case typeId:	
+		case typeId:
+		printf("Entering typeId\n");
+		{
+			symbol_entry* e;
+			e = (symbol_entry*)malloc(sizeof(symbol_entry));
+			if (getSymbolEntry(p->id.s) == 0){
+				e = (symbol_entry*)malloc(sizeof(symbol_entry));
+				e->type = p->symType;
+				e->name = p->id.s;
+				e->addr = GetPos();
+				e->size = 1;
+				//varCount++;
+				addSymbol(e,p->lineNum);
+			}else if ((getSymbolEntry(p->id.s)->blk_level != getCurrentLevel()) && !p->declar)
+			{
+				e = (symbol_entry*)malloc(sizeof(symbol_entry));
+				e->type = p->symType;
+				e->name = p->id.s;
+				e->addr = GetPos();
+				e->size = 1;
+				//varCount++;
+				addSymbol(e,p->lineNum);
+			}
+		}
 	if (getSymbolEntry(p->id.s)->type == TYPE_INT){
-        //retVal.Integer = getSymbolEntry(p->id.s)->val.i; return 1;
 		addI(I_VARIABLE);
-		//scopeCheck(p->id.s);
-		addI(getSymbolEntry(p->id.s)->blk_level);
+		addI(getCurrentLevel()-getSymbolEntry(p->id.s)->blk_level);
 		addI(getSymbolEntry(p->id.s)->offset);
 		addI(I_VALUE);
 		retval = 1;
-		std::cout << "For variable: " << p->id.s << " Blk_lvl: " << getSymbolEntry(p->id.s)->blk_level << " offset: " << getSymbolEntry(p->id.s)->offset << std::endl;
-		std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.i << std::endl;
+		//std::cout << "For variable: " << p->id.s << " Blk_lvl: " << getSymbolEntry(p->id.s)->blk_level << " offset: " << getSymbolEntry(p->id.s)->offset << std::endl;
+		//std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.i << std::endl;
 	}else{
         //retVal.Real = getSymbolEntry(p->id.s)->val.f; return 2;
 		addI(R_VARIABLE);
@@ -51,44 +75,46 @@ int ex(nodeType *p) {
 		addI(getSymbolEntry(p->id.s)->blk_level);
 		addI(getSymbolEntry(p->id.s)->offset);
 		addI(R_VALUE);
-		std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.f << std::endl;
+		//std::cout << "Value is: " << getSymbolEntry(p->id.s)->val.f << std::endl;
 		retval = 2;}
 	return 0;
     case typeOpr:
+		printf("Entering ex opr\n");
         switch(p->opr.oper) {
-		case BEGIN_PROC:
-			printSymbolTable();
-			//addI(I_JR);
-			//addI(0);
-			//currP = GetPos() - 1;
-			begin_proc();
-			ex(p->opr.op[0]); //Does not support return values right now
-			//std::cout << "Current symbol table size: " << getCurrentSymbolTableSize() << std::endl;
-			end_proc();
-			/* Set the relative jmp just after the process ends */
-			//*I_refToPos(currP) = GetPos() - currP + 1;
-			//addI(I_CALL);
-			//addI(getCurrentLevel());
-			//addI(currP+1); /* Call the process block just made */
-			popSymbolTable();
-			return 0;
-		case FOR:
-			{
-				//std::cout << "Beginning For Loop!" << std::endl;
-				ex(p->opr.op[0]);			/* Variable x = something */
-				forCondition = GetPos();
-				ex(p->opr.op[2]);			/* Evaluate condition */
-				addI(I_JMP_IF_TRUE);		/* If condition is true */
-				addI(0);					/* Placeholer */
-				forCurrP = GetPos() - 1; /* Get placeholder addr */
-				ex(p->opr.op[3]); /* Statement to perform */
-				ex(p->opr.op[1]); /* increment value */
-				addI(I_JMP);			/* Loop it over again */
-				addI(forCondition);	/* Jump back and doe the statement again */
-				*I_refToPos(forCurrP) = GetPos();	/* Set the value for the placeholder */
-				//std::cout << "Ending For Loop!" << std::endl;
+			case BEGIN_PROC:
+				//printSymbolTable();
+				pushSymbolTable();
+				//addI(I_JR);
+				//addI(0);
+				//currP = GetPos() - 1;
+				begin_proc();
+				ex(p->opr.op[0]); //Does not support return values right now
+				//std::cout << "Current symbol table size: " << getCurrentSymbolTableSize() << std::endl;
+				end_proc();
+				/* Set the relative jmp just after the process ends */
+				//*I_refToPos(currP) = GetPos() - currP + 1;
+				//addI(I_CALL);
+				//addI(getCurrentLevel());
+				//addI(currP+1); /* Call the process block just made */
+				popSymbolTable(); printf("Removing Symbol Table\n");
 				return 0;
-			}
+			case FOR:
+				{
+					//std::cout << "Beginning For Loop!" << std::endl;
+					ex(p->opr.op[0]);			/* Variable x = something */
+					forCondition = GetPos();
+					ex(p->opr.op[2]);			/* Evaluate condition */
+					addI(I_JMP_IF_TRUE);		/* If condition is true */
+					addI(0);					/* Placeholer */
+					forCurrP = GetPos() - 1; /* Get placeholder addr */
+					ex(p->opr.op[3]); /* Statement to perform */
+					ex(p->opr.op[1]); /* increment value */
+					addI(I_JMP);			/* Loop it over again */
+					addI(forCondition);	/* Jump back and doe the statement again */
+					*I_refToPos(forCurrP) = GetPos();	/* Set the value for the placeholder */
+					//std::cout << "Ending For Loop!" << std::endl;
+					return 0;
+				}
 		case DO:
 			currP = GetPos();
 			ex(p->opr.op[0]); /* Statement */
@@ -162,6 +188,29 @@ int ex(nodeType *p) {
 			return 0; /* Return from case */
 		case '=':
 			/* Check the variables type and perform the assignment as appropriate */
+			/* If not Initalized do it! */
+			if (getSymbolEntry(p->opr.op[0]->id.s) == 0) {
+				symbol_entry* e;
+				e = (symbol_entry*)malloc(sizeof(symbol_entry));
+				if (getSymbolEntry(p->opr.op[0]->id.s) == 0){
+					e = (symbol_entry*)malloc(sizeof(symbol_entry));
+					e->type = p->opr.op[0]->symType;
+					e->name = p->opr.op[0]->id.s;
+					e->addr = GetPos();
+					e->size = 1;
+					//varCount++;
+					addSymbol(e,p->opr.op[0]->lineNum);
+			}else if ((getSymbolEntry(p->opr.op[0]->id.s)->blk_level != getCurrentLevel()) && !p->opr.op[0]->declar)
+				{
+					e = (symbol_entry*)malloc(sizeof(symbol_entry));
+					e->type = p->opr.op[0]->symType;
+					e->name = p->opr.op[0]->id.s;
+					e->addr = GetPos();
+					e->size = 1;
+					//varCount++;
+					addSymbol(e,p->opr.op[0]->lineNum);
+				}
+			}
 			if (getSymbolEntry(p->opr.op[0]->id.s)->type == TYPE_INT)
 			{
 					addI(I_VARIABLE);

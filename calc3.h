@@ -27,7 +27,9 @@ typedef struct {
 
 typedef struct nodeTypeTag {
     nodeEnum type;              /* type of node */
-
+	int declar;
+	int symType;
+	int lineNum;
     /* union must be last entry in nodeType */
     /* because operNodeType may dynamically increase */
     union {
